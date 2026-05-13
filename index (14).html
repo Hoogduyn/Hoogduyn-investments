@@ -1,0 +1,826 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Portfolio Tracker</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@300;400;500&family=Syne:wght@400;600;700;800&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg:#0b0e13;--surface:#12161e;--surface2:#1a1f2e;--border:#252b3b;
+    --accent:#00e5a0;--accent2:#5b8aff;--text:#e8ecf4;--muted:#6b7694;
+    --gain:#00e5a0;--loss:#ff6b6b;
+  }
+  *{margin:0;padding:0;box-sizing:border-box;}
+  body{background:var(--bg);color:var(--text);font-family:'DM Mono',monospace;min-height:100vh;}
+  body::before{content:'';position:fixed;inset:0;background-image:linear-gradient(rgba(0,229,160,0.03) 1px,transparent 1px),linear-gradient(90deg,rgba(0,229,160,0.03) 1px,transparent 1px);background-size:40px 40px;pointer-events:none;z-index:0;}
+  .everything{position:relative;z-index:1;}
+  header{padding:1.5rem 2.5rem;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:1rem;}
+  .logo{font-family:'Syne',sans-serif;font-size:1.4rem;font-weight:800;}
+  .logo span{color:var(--accent);}
+  .last-updated{font-size:0.7rem;color:var(--muted);}
+  #upload-zone{margin:3rem auto;max-width:520px;border:2px dashed var(--border);border-radius:16px;padding:3rem 2rem;text-align:center;cursor:pointer;transition:all 0.2s;position:relative;}
+  #upload-zone:hover,#upload-zone.dragover{border-color:var(--accent);background:rgba(0,229,160,0.04);}
+  #upload-zone input{position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;}
+  .upload-icon{font-size:2.5rem;margin-bottom:1rem;}
+  .upload-title{font-family:'Syne',sans-serif;font-size:1.2rem;font-weight:700;margin-bottom:0.5rem;}
+  .upload-sub{font-size:0.75rem;color:var(--muted);line-height:1.6;}
+  .upload-sub strong{color:var(--accent);}
+  #dashboard{display:none;padding:1.5rem 2.5rem 3rem;}
+  .controls{display:flex;align-items:center;gap:0.75rem;margin-bottom:1.5rem;flex-wrap:wrap;}
+  .filter-label{font-size:0.7rem;color:var(--muted);text-transform:uppercase;letter-spacing:0.1em;}
+  .filter-btn{background:var(--surface);border:1px solid var(--border);color:var(--muted);padding:0.4rem 0.9rem;border-radius:6px;font-family:'DM Mono',monospace;font-size:0.72rem;cursor:pointer;transition:all 0.15s;}
+  .filter-btn:hover{border-color:var(--accent);color:var(--text);}
+  .filter-btn.active{background:rgba(0,229,160,0.12);border-color:var(--accent);color:var(--accent);}
+  .spacer{flex:1;}
+  .btn-primary{background:var(--accent);border:none;color:#000;padding:0.4rem 1.1rem;border-radius:6px;font-family:'DM Mono',monospace;font-size:0.72rem;cursor:pointer;font-weight:600;transition:all 0.15s;}
+  .btn-primary:hover{background:#00ffb3;}
+  .btn-primary:disabled{opacity:0.4;cursor:not-allowed;}
+  .btn-ghost{background:transparent;border:1px solid var(--border);color:var(--muted);padding:0.4rem 0.9rem;border-radius:6px;font-family:'DM Mono',monospace;font-size:0.72rem;cursor:pointer;transition:all 0.15s;}
+  .btn-ghost:hover{border-color:var(--accent);color:var(--accent);}
+  .kpi-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:1rem;margin-bottom:1.5rem;}
+  .kpi-card{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:1.25rem 1.5rem;position:relative;overflow:hidden;}
+  .kpi-card::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,var(--accent),transparent);}
+  .kpi-card.blue::before{background:linear-gradient(90deg,var(--accent2),transparent);}
+  .kpi-card.red::before{background:linear-gradient(90deg,var(--loss),transparent);}
+  .kpi-label{font-size:0.65rem;color:var(--muted);text-transform:uppercase;letter-spacing:0.1em;margin-bottom:0.5rem;}
+  .kpi-value{font-family:'Syne',sans-serif;font-size:1.5rem;font-weight:700;line-height:1;margin-bottom:0.3rem;}
+  .kpi-sub{font-size:0.68rem;color:var(--muted);}
+  .gain-text{color:var(--gain);}
+  .loss-text{color:var(--loss);}
+  .charts-grid{display:grid;grid-template-columns:1fr 1fr;gap:1.5rem;margin-bottom:1.5rem;}
+  @media(max-width:900px){.charts-grid{grid-template-columns:1fr;}}
+  .chart-card{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:1.5rem;margin-bottom:1.5rem;}
+  .chart-title{font-family:'Syne',sans-serif;font-size:0.85rem;font-weight:700;margin-bottom:1.25rem;}
+  .chart-wrap{position:relative;height:280px;}
+  .sector-legend{margin-top:1rem;display:flex;flex-direction:column;gap:0.4rem;}
+  .legend-item{display:flex;align-items:center;gap:0.5rem;font-size:0.72rem;}
+  .legend-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0;}
+  .legend-name{flex:1;color:var(--muted);}
+  .legend-pct{color:var(--text);font-weight:500;}
+  .legend-val{color:var(--muted);font-size:0.65rem;}
+  .tab-bar{display:flex;gap:0;margin-bottom:1.5rem;border-bottom:1px solid var(--border);}
+  .tab-btn{background:transparent;border:none;color:var(--muted);padding:0.6rem 1.2rem;font-family:'DM Mono',monospace;font-size:0.75rem;cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-1px;transition:all 0.15s;}
+  .tab-btn:hover{color:var(--text);}
+  .tab-btn.active{color:var(--accent);border-bottom-color:var(--accent);}
+  .tab-content{display:none;}
+  .tab-content.active{display:block;}
+  table{width:100%;border-collapse:collapse;font-size:0.75rem;}
+  thead th{text-align:left;padding:0.5rem 0.75rem;color:var(--muted);font-size:0.65rem;text-transform:uppercase;letter-spacing:0.08em;border-bottom:1px solid var(--border);white-space:nowrap;}
+  tbody tr{border-bottom:1px solid rgba(37,43,59,0.4);transition:background 0.15s;}
+  tbody tr:hover{background:rgba(255,255,255,0.02);}
+  tbody tr:last-child{border-bottom:none;}
+  td{padding:0.7rem 0.75rem;white-space:nowrap;}
+  .stock-name{font-weight:500;}
+  .stock-isin{font-size:0.62rem;color:var(--muted);}
+  .sector-badge{display:inline-block;padding:0.15rem 0.5rem;border-radius:4px;font-size:0.65rem;}
+  .status-bar{font-size:0.68rem;color:var(--muted);margin-bottom:1rem;padding:0.5rem 0.75rem;background:var(--surface2);border-radius:6px;display:none;}
+  .price-note{font-size:0.68rem;color:var(--muted);margin-top:1rem;padding:0.75rem 1rem;background:var(--surface2);border-radius:8px;border-left:2px solid var(--accent2);}
+  .no-ticker{color:var(--muted);font-size:0.65rem;}
+</style>
+</head>
+<body>
+<div class="everything">
+<header>
+  <div class="logo">PORT<span>FOLIO</span></div>
+  <div class="last-updated" id="last-updated">No data loaded</div>
+</header>
+
+<div id="upload-zone">
+  <input type="file" accept=".csv,.xlsx,.xls" id="file-input">
+  <div class="upload-icon">📊</div>
+  <div class="upload-title">Drop your DEGIRO file here</div>
+  <div class="upload-sub">CSV or Excel (.xlsx) transaction export from DEGIRO.<br><strong>Everything stays in your browser — nothing is uploaded.</strong></div>
+</div>
+
+<div id="dashboard">
+  <div class="controls">
+    <span class="filter-label">Period</span>
+    <button class="filter-btn" data-period="1M">1M</button>
+    <button class="filter-btn" data-period="3M">3M</button>
+    <button class="filter-btn" data-period="6M">6M</button>
+    <button class="filter-btn" data-period="1Y">1Y</button>
+    <button class="filter-btn active" data-period="ALL">ALL</button>
+    <div class="spacer"></div>
+    <button class="btn-ghost" id="upload-new-btn">↑ New File</button>
+    <input type="file" accept=".csv,.xlsx,.xls" id="file-input-2" style="display:none">
+    <button class="btn-primary" id="refresh-btn">⟳ Refresh Live Prices</button>
+  </div>
+
+  <div id="status-bar" class="status-bar"></div>
+
+  <div class="kpi-grid">
+    <div class="kpi-card blue">
+      <div class="kpi-label">Total Invested</div>
+      <div class="kpi-value" id="kpi-invested">—</div>
+      <div class="kpi-sub">Net contributions (SEK)</div>
+    </div>
+    <div class="kpi-card" id="kpi-card-value">
+      <div class="kpi-label">Current Value</div>
+      <div class="kpi-value" id="kpi-value">—</div>
+      <div class="kpi-sub" id="kpi-value-sub">Refresh for live prices</div>
+    </div>
+    <div class="kpi-card" id="kpi-card-gain">
+      <div class="kpi-label">Net Gain / Loss</div>
+      <div class="kpi-value" id="kpi-gain">—</div>
+      <div class="kpi-sub" id="kpi-gain-pct">Refresh for live prices</div>
+    </div>
+    <div class="kpi-card blue">
+      <div class="kpi-label">Open Positions</div>
+      <div class="kpi-value" id="kpi-holdings">—</div>
+      <div class="kpi-sub">Stocks you currently hold</div>
+    </div>
+  </div>
+
+  <div class="charts-grid">
+    <div class="chart-card" style="margin-bottom:0">
+      <div class="chart-title">Sector Allocation</div>
+      <div class="chart-wrap"><canvas id="sector-chart"></canvas></div>
+      <div class="sector-legend" id="sector-legend"></div>
+    </div>
+    <div class="chart-card" style="margin-bottom:0">
+      <div class="chart-title">Invested vs. Current Value</div>
+      <div class="chart-wrap"><canvas id="gains-chart"></canvas></div>
+    </div>
+  </div>
+
+  <div class="chart-card">
+    <div class="chart-title">Portfolio Growth Over Time</div>
+    <div class="chart-wrap" style="height:200px"><canvas id="timeline-chart"></canvas></div>
+  </div>
+
+  <div class="tab-bar">
+    <button class="tab-btn active" data-tab="current">Current Holdings</button>
+    <button class="tab-btn" data-tab="history">Transaction History</button>
+  </div>
+
+  <div id="tab-current" class="tab-content active">
+    <div class="chart-card" style="overflow-x:auto">
+      <table>
+        <thead><tr>
+          <th>Stock</th><th>Sector</th><th>Shares</th>
+          <th>Avg Buy Price</th><th>Total Cost (SEK)</th>
+          <th>Live Price</th><th>Current Value (SEK)</th><th>Gain / Loss</th>
+        </tr></thead>
+        <tbody id="holdings-tbody"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <div id="tab-history" class="tab-content">
+    <div class="chart-card" style="overflow-x:auto">
+      <table>
+        <thead><tr>
+          <th>Date</th><th>Stock</th><th>Type</th><th>Shares</th><th>Currency</th><th>Total (SEK)</th>
+        </tr></thead>
+        <tbody id="history-tbody"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="price-note">⚡ Live prices via Finnhub API. FX rates hardcoded (updated monthly). All data stays in your browser.</div>
+</div>
+</div>
+
+<script>
+// Using Yahoo Finance — no API key needed!
+
+// ── SECTOR KEYWORDS ──────────────────────────────────────────────────────────
+const SECTOR_KW = {
+  'RHEINMETALL':'Defense','SAAB':'Defense','BAE':'Defense','LOCKHEED':'Defense','RAYTHEON':'Defense','NORTHROP':'Defense','LEONARDO':'Defense','THALES':'Defense',
+  'NVIDIA':'Technology','SERVICENOW':'Technology','MICROSOFT':'Technology','APPLE':'Technology','GOOGLE':'Technology','ALPHABET':'Technology','META':'Technology','AMAZON':'Technology','TESLA':'Technology','NETFLIX':'Technology','SALESFORCE':'Technology','ORACLE':'Technology','SAP':'Technology','ASML':'Technology','IDEANOMICS':'Technology','PALANTIR':'Technology','CROWDSTRIKE':'Technology','DATADOG':'Technology','SNOWFLAKE':'Technology','UBER':'Technology','AIRBNB':'Technology',
+  'NOVO':'Healthcare','PFIZER':'Healthcare','JOHNSON':'Healthcare','ASTRAZENECA':'Healthcare','MODERNA':'Healthcare','ABBVIE':'Healthcare','VAXART':'Healthcare','KITOV':'Healthcare','BIONTECH':'Healthcare','GILEAD':'Healthcare',
+  'JPMORGAN':'Finance','GOLDMAN':'Finance','VISA':'Finance','MASTERCARD':'Finance','BERKSHIRE':'Finance','SEB':'Finance','HANDELSBANKEN':'Finance','SWEDBANK':'Finance','AVANZA':'Finance',
+  'VOLVO':'Industrials','ATLAS':'Industrials','SANDVIK':'Industrials','SKF':'Industrials','ABB':'Industrials','SIEMENS':'Industrials','WORKHORSE':'Industrials','NIKOLA':'Industrials','SPARTAN':'Industrials',
+  'SHELL':'Energy','BP':'Energy','EXXON':'Energy','CHEVRON':'Energy','TOTAL':'Energy','TORTOISE':'Energy',
+  'COMFORT':'Consumer','WALMART':'Consumer','TARGET':'Consumer','NIKE':'Consumer','LVMH':'Consumer',
+  // Explicit ISIN-based sector overrides
+
+};
+// ISIN-based sector map (most accurate)
+const ISIN_SECTOR = {
+  'DE0007030009': 'Defense',       // Rheinmetall
+  'US81762P1021': 'Technology',    // ServiceNow
+  'US79466L3024': 'Technology',    // Salesforce
+  'US30303M1027': 'Technology',    // Meta
+  'NL0010273215': 'Technology',    // ASML
+  'CNE100000296': 'Technology',    // BYD
+  'US67066G1040': 'Technology',    // NVIDIA
+  'US0167066592': 'Technology',    // NVIDIA
+  'IE0000J5TQP4': 'Defense',       // Future of Defence ETF
+  'US5738741041': 'Technology',    // Marvell
+  'US0846707026': 'Finance',       // Berkshire Hathaway
+  'IE00BLPK3577': 'Technology',    // WisdomTree Cybersecurity ETF
+  'US60937P1066': 'Technology',    // MongoDB
+  'US0079031078': 'Technology',    // AMD
+  'US02079K3059': 'Technology',    // Alphabet
+  'US38259P5089': 'Technology',    // Alphabet
+  'IE00BKX55T58': 'Finance',       // Vanguard World ETF
+  'IE00BMC38736': 'Technology',    // VanEck Semiconductor ETF
+  'US5949181045': 'Technology',    // Microsoft
+  'US0378331005': 'Technology',    // Apple
+  'US0231351067': 'Technology',    // Amazon
+  'US88160R1014': 'Technology',    // Tesla
+  'US46625H1005': 'Finance',       // JPMorgan
+  'US70450Y1038': 'Technology',    // Palantir
+  'US22788C1053': 'Technology',    // CrowdStrike
+  'US64110L1061': 'Technology',    // Netflix
+  'SE0021921269': 'Defense',       // SAAB
+  'SE0000112724': 'Industrials',   // Volvo
+};
+
+function guessSector(name, isin) {
+  if (isin && ISIN_SECTOR[isin]) return ISIN_SECTOR[isin];
+  const u=name.toUpperCase();
+  for(const[k,v]of Object.entries(SECTOR_KW))if(u.includes(k))return v;
+  return 'Other';
+}
+const SECTOR_COLORS={'Technology':'#5b8aff','Defense':'#ff6b6b','Healthcare':'#00e5a0','Finance':'#f9c74f','Industrials':'#a78bfa','Energy':'#fb8500','Consumer':'#06d6a0','Real Estate':'#ef476f','Other':'#6b7694'};
+const sc=s=>SECTOR_COLORS[s]||'#6b7694';
+
+// ── ISIN → TICKER ────────────────────────────────────────────────────────────
+const ISIN_TICKER={
+  'DE0007030009':'RHM',
+  'SE0021921269':'SAAB-B.ST','SE0000112724':'VOLV-B.ST',
+  'US81762P1021':'NOW','US5949181045':'MSFT','US0378331005':'AAPL',
+  'US67066G1040':'NVDA','US0167066592':'NVDA',
+  'US02079K3059':'GOOGL','US38259P5089':'GOOGL',
+  'US30303M1027':'META','US0231351067':'AMZN','US88160R1014':'TSLA',
+  'US79466L3024':'CRM','US46625H1005':'JPM','US17275R1023':'CSCO',
+  'US4592001014':'IBM','US9311421039':'WMT','US7427181091':'PG',
+  'US70450Y1038':'PLTR','US22788C1053':'CRWD','US23804L1035':'DDOG',
+  'US8334451098':'SNOW','US9020941024':'UBER','US0090661010':'ABNB',
+  'US09075V1026':'BNTX','US3755581036':'GILD','US5128071082':'LLY',
+  'US00206R1023':'T','US64110L1061':'NFLX','US68389X1054':'ORCL',
+};
+
+function getTickerForHolding(h) {
+  if(ISIN_TICKER[h.isin])return ISIN_TICKER[h.isin];
+  if(h.isin&&h.isin.startsWith('US')){
+    const t=h.name.split(' ')[0].toUpperCase().replace(/[^A-Z]/g,'');
+    return t.length>=2?t:null;
+  }
+  return null;
+}
+
+// ── FX RATES (hardcoded, updated periodically) ───────────────────────────────
+// These are approximate rates as of May 2026
+const fx={EUR:11.2,USD:10.3,SEK:1,GBP:13.8,DKK:1.50,NOK:0.97,GBp:0.138};
+function toSEK(price,currency){
+  if(!currency||currency==='SEK')return price;
+  if(currency==='GBp')return(price/100)*fx.GBP;
+  return price*(fx[currency]||1);
+}
+
+// ── YAHOO FINANCE via Cloudflare Worker proxy ────────────────────────────────
+const PROXY = 'https://test.rhoogduijn.workers.dev';
+
+async function fetchYahooPrice(symbol) {
+  try {
+    const url = `${PROXY}?symbol=${encodeURIComponent(symbol)}&range=5d&interval=1d`;
+    const resp = await fetch(url);
+    if (!resp.ok) return null;
+    const data = await resp.json();
+    const price = data?.chart?.result?.[0]?.meta?.regularMarketPrice;
+    const currency = data?.chart?.result?.[0]?.meta?.currency;
+    return (price && price > 0) ? { price, currency } : null;
+  } catch(e) { return null; }
+}
+
+async function fetchYahooHistory(symbol, fromTimestamp) {
+  try {
+    const url = `${PROXY}?symbol=${encodeURIComponent(symbol)}&period1=${fromTimestamp}&interval=1d`;
+    const resp = await fetch(url);
+    if (!resp.ok) return null;
+    const data = await resp.json();
+    const result = data?.chart?.result?.[0];
+    if (!result) return null;
+    const timestamps = result.timestamp || [];
+    const closes = result.indicators?.quote?.[0]?.close || [];
+    const currency = result.meta?.currency;
+    return timestamps.map((ts, i) => ({
+      date: new Date(ts * 1000),
+      close: closes[i],
+      currency
+    })).filter(p => p.close != null);
+  } catch(e) { return null; }
+}
+
+async function loadFXRates() {
+  try {
+    const resp = await fetch('https://open.er-api.com/v6/latest/SEK');
+    const data = await resp.json();
+    if (data && data.rates) {
+      fx.EUR = 1/data.rates.EUR;
+      fx.USD = 1/data.rates.USD;
+      fx.GBP = 1/data.rates.GBP;
+      fx.DKK = 1/data.rates.DKK;
+      fx.NOK = 1/data.rates.NOK;
+    }
+  } catch(e) {}
+}
+
+// ── CSV/XLSX PARSING ─────────────────────────────────────────────────────────
+function parseNum(s){
+  if(!s&&s!==0)return 0;
+  s=String(s).replace(/−/g,'-').replace(/\s/g,'').replace(/,/g,'.');
+  const v=parseFloat(s);
+  return isNaN(v)?0:v;
+}
+function parseDate(s){
+  if(!s)return null;
+  s=String(s).trim();
+  const p=s.split('-');
+  if(p.length===3&&p[0].length===2)return new Date(+p[2],+p[1]-1,+p[0]);
+  // try MM/DD/YYYY or YYYY-MM-DD
+  const d=new Date(s);
+  return isNaN(d)?null:d;
+}
+function splitLine(line,sep){
+  if(sep==='\t')return line.split('\t').map(s=>s.trim());
+  const res=[];let inQ=false,cur='';
+  for(const ch of line){
+    if(ch==='"'){inQ=!inQ;}
+    else if(ch===','&&!inQ){res.push(cur.trim());cur='';}
+    else cur+=ch;
+  }
+  res.push(cur.trim());
+  return res;
+}
+function parseCSVText(text){
+  const lines=text.split('\n').map(l=>l.replace(/\r/g,'').trimEnd()).filter(Boolean);
+  if(lines.length<2)return[];
+  const sep=lines[0].includes('\t')?'\t':',';
+  const rows=[];
+  for(let i=1;i<lines.length;i++){
+    const c=splitLine(lines[i],sep);
+    if(c.length<12)continue;
+    const name=c[2],isin=c[3];
+    if(!name||!isin||isin.length<5)continue;
+    const antal=parseNum(c[6]);
+    if(antal===0)continue;
+    const totalSEK=parseNum(c[15]||c[14]||'0');
+    rows.push({
+      date:parseDate(c[0]),dateStr:(c[0]||'').trim(),
+      name,isin,shares:antal,
+      currency:(c[8]||'SEK').trim().replace(/[^A-Za-z]/g,''),
+      totalSEK,
+    });
+  }
+  return rows;
+}
+function parseXLSX(arrayBuffer){
+  const wb=XLSX.read(arrayBuffer,{type:'array'});
+  const ws=wb.Sheets[wb.SheetNames[0]];
+  // Get raw rows as arrays
+  const rows=XLSX.utils.sheet_to_json(ws,{header:1,raw:false,dateNF:'DD-MM-YYYY'});
+  if(rows.length<2)return[];
+  const result=[];
+  for(let i=1;i<rows.length;i++){
+    const c=rows[i];
+    if(!c||c.length<12)continue;
+    const name=String(c[2]||'').trim();
+    const isin=String(c[3]||'').trim();
+    if(!name||!isin||isin.length<5)continue;
+    const antal=parseNum(c[6]);
+    if(antal===0)continue;
+    const totalSEK=parseNum(c[15]||c[14]||0);
+    const dateStr=String(c[0]||'').trim();
+    result.push({
+      date:parseDate(dateStr),dateStr,
+      name,isin,shares:antal,
+      currency:String(c[8]||'SEK').trim().replace(/[^A-Za-z]/g,''),
+      totalSEK,
+    });
+  }
+  return result;
+}
+
+// ── HOLDINGS ─────────────────────────────────────────────────────────────────
+function buildHoldings(transactions,fromDate){
+  const map={};
+  for(const tx of transactions){
+    if(fromDate&&tx.date&&tx.date<fromDate)continue;
+    if(!map[tx.isin])map[tx.isin]={name:tx.name,isin:tx.isin,shares:0,costSEK:0,sector:guessSector(tx.name, tx.isin),currency:tx.currency};
+    const h=map[tx.isin];
+    h.shares+=tx.shares; // positive=buy, negative=sell
+    h.costSEK-=tx.totalSEK; // totalSEK negative for buys, so -negative = positive cost
+  }
+  return Object.values(map).filter(h=>h.shares>0.001);
+}
+
+function buildTimeline(fromDate){
+  // If we have historical prices, build REAL portfolio value over time
+  if(Object.keys(historicalPrices).length > 0){
+    return buildRealTimeline(fromDate);
+  }
+  // Fallback: show cost basis over time
+  return buildCostTimeline(fromDate);
+}
+
+function buildCostTimeline(fromDate){
+  const sorted = [...allTx].filter(t => t.date).sort((a,b) => a.date - b.date);
+  let cum = 0;
+  const allPoints = [];
+  for(const tx of sorted){
+    cum += tx.shares > 0 ? Math.abs(tx.totalSEK) : -Math.abs(tx.totalSEK);
+    if(cum < 0) cum = 0;
+    const last = allPoints[allPoints.length-1];
+    if(last && last.dateStr === tx.dateStr) last.value = cum;
+    else allPoints.push({ dateStr: tx.dateStr, dateObj: tx.date, value: cum });
+  }
+  if(!fromDate) return allPoints;
+  let startValue = 0;
+  for(const p of allPoints){ if(p.dateObj < fromDate) startValue = p.value; else break; }
+  const inPeriod = allPoints.filter(p => p.dateObj >= fromDate);
+  const startDateStr = fromDate.toLocaleDateString('sv-SE');
+  const todayStr = new Date().toLocaleDateString('sv-SE');
+  const endValue = inPeriod.length > 0 ? inPeriod[inPeriod.length-1].value : startValue;
+  return [{ dateStr: startDateStr, value: startValue }, ...inPeriod, { dateStr: todayStr, value: endValue }];
+}
+
+function buildRealTimeline(fromDate){
+  // Get all unique dates from historical price data
+  const allDates = new Set();
+  for(const prices of Object.values(historicalPrices)){
+    prices.forEach(p => allDates.add(p.date.toISOString().slice(0,10)));
+  }
+  const sortedDates = Array.from(allDates).sort();
+
+  // For each date, calculate total portfolio value:
+  // sum over all holdings of (shares held on that date * closing price on that date)
+  const points = [];
+
+  for(const dateStr of sortedDates){
+    const date = new Date(dateStr);
+    if(fromDate && date < fromDate) continue;
+
+    let totalValue = 0;
+    for(const h of holdings){
+      // Calculate shares held on this date from transactions
+      let sharesOnDate = 0;
+      for(const tx of allTx){
+        if(tx.isin === h.isin && tx.date && tx.date <= date){
+          sharesOnDate += tx.shares;
+        }
+      }
+      if(sharesOnDate <= 0) continue;
+
+      // Find closest historical price on or before this date
+      const hist = historicalPrices[h.isin];
+      if(!hist) {
+        // No price data — use cost basis as fallback
+        const costOnDate = allTx
+          .filter(tx => tx.isin === h.isin && tx.date && tx.date <= date)
+          .reduce((sum, tx) => sum + (tx.shares > 0 ? Math.abs(tx.totalSEK) : -Math.abs(tx.totalSEK)), 0);
+        totalValue += Math.max(costOnDate, 0);
+        continue;
+      }
+
+      const priceEntry = hist.filter(p => p.date <= date).slice(-1)[0];
+      if(priceEntry) totalValue += sharesOnDate * priceEntry.priceSEK;
+    }
+
+    points.push({ dateStr, value: totalValue });
+  }
+
+  // Add today as final point using live prices
+  if(points.length > 0){
+    let todayValue = 0;
+    for(const h of holdings){
+      const lp = livePrices[h.isin];
+      if(lp) todayValue += h.shares * lp.priceSEK;
+      else todayValue += Math.max(h.costSEK, 0);
+    }
+    points.push({ dateStr: new Date().toLocaleDateString('sv-SE'), value: todayValue });
+  }
+
+  // If fromDate set, prepend a start anchor
+  if(fromDate && points.length > 0){
+    const startDateStr = fromDate.toLocaleDateString('sv-SE');
+    if(points[0].dateStr !== startDateStr){
+      points.unshift({ dateStr: startDateStr, value: points[0].value });
+    }
+  }
+
+  return points;
+}
+
+// ── CHARTS ───────────────────────────────────────────────────────────────────
+let charts={};
+function destroyCharts(){Object.values(charts).forEach(c=>c.destroy());charts={};}
+
+function renderSectorChart(holdings){
+  const sec={};
+  for(const h of holdings)sec[h.sector]=(sec[h.sector]||0)+Math.max(h.costSEK,0);
+  const labels=Object.keys(sec),vals=Object.values(sec),total=vals.reduce((a,b)=>a+b,0);
+  const colors=labels.map(sc);
+  charts.sector=new Chart(document.getElementById('sector-chart').getContext('2d'),{
+    type:'doughnut',
+    data:{labels,datasets:[{data:vals,backgroundColor:colors,borderColor:'#12161e',borderWidth:3,hoverOffset:8}]},
+    options:{responsive:true,maintainAspectRatio:false,cutout:'68%',plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>` ${c.label}: ${fmt(c.raw)} (${((c.raw/total)*100).toFixed(1)}%)`}}}}
+  });
+  document.getElementById('sector-legend').innerHTML=labels.map((l,i)=>`
+    <div class="legend-item">
+      <div class="legend-dot" style="background:${colors[i]}"></div>
+      <span class="legend-name">${l}</span>
+      <span class="legend-pct">${((vals[i]/total)*100).toFixed(1)}%</span>
+      <span class="legend-val">${fmt(vals[i])}</span>
+    </div>`).join('');
+}
+
+function renderGainsChart(invested,current){
+  const gain=current-invested;
+  charts.gains=new Chart(document.getElementById('gains-chart').getContext('2d'),{
+    type:'bar',
+    data:{
+      labels:['Portfolio'],
+      datasets:[
+        {label:'Invested',data:[invested],backgroundColor:'rgba(91,138,255,0.7)',borderColor:'#5b8aff',borderWidth:2,borderRadius:6},
+        {label:gain>=0?'Gains':'Loss',data:[Math.abs(gain)],backgroundColor:gain>=0?'rgba(0,229,160,0.7)':'rgba(255,107,107,0.7)',borderColor:gain>=0?'#00e5a0':'#ff6b6b',borderWidth:2,borderRadius:6}
+      ]
+    },
+    options:{
+      responsive:true,maintainAspectRatio:false,
+      scales:{
+        x:{stacked:true,grid:{display:false},ticks:{color:'#6b7694',font:{family:'DM Mono',size:11}},border:{color:'#252b3b'}},
+        y:{stacked:true,grid:{color:'rgba(37,43,59,0.5)'},ticks:{color:'#6b7694',font:{family:'DM Mono',size:10},callback:v=>fmt(v,true)},border:{color:'#252b3b'}}
+      },
+      plugins:{
+        legend:{labels:{color:'#6b7694',font:{family:'DM Mono',size:11},boxWidth:12}},
+        tooltip:{callbacks:{label:c=>` ${c.dataset.label}: ${fmt(c.raw)}`}}
+      }
+    }
+  });
+}
+
+function renderTimeline(points){
+  if(!points||!points.length)return;
+  charts.timeline=new Chart(document.getElementById('timeline-chart').getContext('2d'),{
+    type:'line',
+    data:{
+      labels:points.map(p=>p.dateStr||p.date),
+      datasets:[{
+        label:'Net Invested (SEK)',
+        data:points.map(p=>p.value),
+        borderColor:'#5b8aff',
+        backgroundColor:'rgba(91,138,255,0.08)',
+        fill:true,tension:0.3,
+        pointRadius:points.length<25?3:0,
+        borderWidth:2
+      }]
+    },
+    options:{
+      responsive:true,maintainAspectRatio:false,
+      scales:{
+        x:{grid:{display:false},ticks:{color:'#6b7694',font:{family:'DM Mono',size:10},maxTicksLimit:8},border:{color:'#252b3b'}},
+        y:{
+          grid:{color:'rgba(37,43,59,0.5)'},
+          ticks:{color:'#6b7694',font:{family:'DM Mono',size:10},callback:v=>fmt(v,true)},
+          border:{color:'#252b3b'},
+          min: 0  // never show below zero
+        }
+      },
+      plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>` ${fmt(c.raw)}`}}}
+    }
+  });
+}
+
+// ── UTILS ────────────────────────────────────────────────────────────────────
+function fmt(v,short=false){
+  if(short&&Math.abs(v)>=1e6)return(v/1e6).toFixed(1)+'M kr';
+  if(short&&Math.abs(v)>=1e3)return(v/1e3).toFixed(0)+'k kr';
+  return v.toLocaleString('sv-SE',{minimumFractionDigits:0,maximumFractionDigits:0})+' kr';
+}
+function getFromDate(p){
+  const n=new Date();
+  if(p==='1M')return new Date(n.getFullYear(),n.getMonth()-1,n.getDate());
+  if(p==='3M')return new Date(n.getFullYear(),n.getMonth()-3,n.getDate());
+  if(p==='6M')return new Date(n.getFullYear(),n.getMonth()-6,n.getDate());
+  if(p==='1Y')return new Date(n.getFullYear()-1,n.getMonth(),n.getDate());
+  return null;
+}
+
+// ── STATE ────────────────────────────────────────────────────────────────────
+let allTx=[],period='ALL',livePrices={},historicalPrices={},holdings=[];
+
+function render(){
+  const from=getFromDate(period);
+  holdings=buildHoldings(allTx,null); // always show current holdings regardless of period
+  const invested=holdings.reduce((s,h)=>s+Math.max(h.costSEK,0),0);
+  let current=0,liveCount=0;
+  for(const h of holdings){
+    const lp=livePrices[h.isin];
+    if(lp){current+=lp.priceSEK*h.shares;liveCount++;}
+    else current+=Math.max(h.costSEK,0);
+  }
+  const gain=current-invested,pct=invested>0?(gain/invested)*100:0,hasLive=liveCount>0;
+
+  document.getElementById('kpi-invested').textContent=fmt(invested);
+  document.getElementById('kpi-value').textContent=fmt(current);
+  document.getElementById('kpi-value-sub').textContent=hasLive?`Live for ${liveCount}/${holdings.length} positions`:'Click Refresh for live prices';
+  document.getElementById('kpi-holdings').textContent=holdings.length;
+
+  const gainEl=document.getElementById('kpi-gain');
+  gainEl.textContent=(gain>=0?'+':'')+fmt(gain);
+  gainEl.className='kpi-value '+(gain>=0?'gain-text':'loss-text');
+  document.getElementById('kpi-card-gain').className='kpi-card'+(gain<0?' red':'');
+  document.getElementById('kpi-gain-pct').textContent=hasLive?`${pct>=0?'+':''}${pct.toFixed(2)}% total return`:'Refresh for live calculation';
+
+  destroyCharts();
+  renderSectorChart(holdings);
+  renderGainsChart(invested,current);
+  renderTimeline(buildTimeline(from));
+  renderHoldings(holdings);
+  renderHistory();
+}
+
+function renderHoldings(hs){
+  document.getElementById('holdings-tbody').innerHTML=hs.map(h=>{
+    const lp=livePrices[h.isin];
+    const avg=h.shares>0?h.costSEK/h.shares:0;
+    const cur=lp?lp.priceSEK*h.shares:null;
+    const gain=cur!==null?cur-h.costSEK:null;
+    const pct=(gain!=null&&h.costSEK>0)?(gain/h.costSEK)*100:null;
+    const priceCell=lp?`<span style="color:var(--text);font-weight:500">${lp.price.toFixed(2)} ${lp.currency}</span>`:`<span class="no-ticker">— refresh</span>`;
+    const valCell=cur!==null?fmt(cur):fmt(Math.max(h.costSEK,0));
+    const gainCell=gain!==null?`<span class="${gain>=0?'gain-text':'loss-text'}">${gain>=0?'+':''}${fmt(gain)} ${pct!=null?'('+( pct>=0?'+':'')+pct.toFixed(1)+'%)':''}</span>`:`<span class="no-ticker">—</span>`;
+    return`<tr>
+      <td><div class="stock-name">${h.name}</div><div class="stock-isin">${h.isin}</div></td>
+      <td><span class="sector-badge" style="background:${sc(h.sector)}18;border:1px solid ${sc(h.sector)}40;color:${sc(h.sector)}">${h.sector}</span></td>
+      <td>${h.shares.toFixed(4)}</td>
+      <td>${fmt(avg)}</td>
+      <td>${fmt(Math.max(h.costSEK,0))}</td>
+      <td>${priceCell}</td>
+      <td>${valCell}</td>
+      <td>${gainCell}</td>
+    </tr>`;
+  }).join('');
+}
+
+function renderHistory(){
+  const sorted=[...allTx].filter(t=>t.date).sort((a,b)=>b.date-a.date);
+  document.getElementById('history-tbody').innerHTML=sorted.map(tx=>{
+    const isBuy=tx.shares>0;
+    return`<tr>
+      <td>${tx.dateStr}</td>
+      <td><div class="stock-name">${tx.name}</div><div class="stock-isin">${tx.isin}</div></td>
+      <td><span style="color:${isBuy?'var(--gain)':'var(--loss)'};font-weight:500">${isBuy?'BUY':'SELL'}</span></td>
+      <td>${Math.abs(tx.shares).toFixed(4)}</td>
+      <td>${tx.currency}</td>
+      <td style="color:${isBuy?'var(--loss)':'var(--gain)'}">${isBuy?'-':'+'}${fmt(Math.abs(tx.totalSEK))}</td>
+    </tr>`;
+  }).join('');
+}
+
+// ── REFRESH PRICES via Yahoo Finance ─────────────────────────────────────────
+async function refreshPrices(){
+  const btn=document.getElementById('refresh-btn');
+  const sb=document.getElementById('status-bar');
+  btn.disabled=true; btn.textContent='⟳ Fetching...'; sb.style.display='block';
+  await loadFXRates();
+
+  // Yahoo Finance ticker format:
+  // US stocks: NVDA, NOW, MSFT
+  // German stocks: RHM.DE
+  // Swedish stocks: SAAB-B.ST, VOLV-B.ST
+  const isinToYahoo = {
+    // From your holdings
+    'DE0007030009': 'RHM.DE',        // Rheinmetall AG - Frankfurt
+    'US81762P1021': 'NOW',           // ServiceNow
+    'US79466L3024': 'CRM',           // Salesforce
+    'US30303M1027': 'META',          // Meta Platforms
+    'NL0010273215': 'ASML',          // ASML Holding
+    'CNE100000296': '1211.HK',       // BYD - Hong Kong (non-tradeable, may fail)
+    'US67066G1040': 'NVDA',          // NVIDIA
+    'IE0000J5TQP4': 'FUTR.L',        // Future of Defence UCITS ETF - London
+    'US5738741041': 'MRVL',          // Marvell Technology
+    'US0846707026': 'BRK-B',         // Berkshire Hathaway B
+    'IE00BLPK3577': 'WCBR',          // WisdomTree Cybersecurity ETF
+    'US60937P1066': 'MDB',           // MongoDB
+    'US0079031078': 'AMD',           // Advanced Micro Devices
+    'US02079K3059': 'GOOGL',         // Alphabet
+    'IE00BKX55T58': 'VEA',           // Vanguard FTSE Developed World ETF
+    'IE00BMC38736': 'SMH',           // VanEck Semiconductor ETF
+    // Extra common ones
+    'US5949181045': 'MSFT',
+    'US0378331005': 'AAPL',
+    'US0167066592': 'NVDA',
+    'US38259P5089': 'GOOGL',
+    'US0231351067': 'AMZN',
+    'US88160R1014': 'TSLA',
+    'US46625H1005': 'JPM',
+    'US70450Y1038': 'PLTR',
+    'US22788C1053': 'CRWD',
+    'US64110L1061': 'NFLX',
+  };
+
+  // For unmapped ISINs, try guessing Yahoo ticker from name
+  function getYahooTicker(h) {
+    if (isinToYahoo[h.isin]) return isinToYahoo[h.isin];
+    if (h.isin.startsWith('US')) {
+      return h.name.split(' ')[0].toUpperCase().replace(/[^A-Z]/g,'');
+    }
+    if (h.isin.startsWith('SE')) {
+      // Try appending .ST for Stockholm
+      return h.name.split(' ')[0].toUpperCase().replace(/[^A-Z]/g,'') + '.ST';
+    }
+    if (h.isin.startsWith('DE')) {
+      return h.name.split(' ')[0].toUpperCase().replace(/[^A-Z]/g,'') + '.DE';
+    }
+    return null;
+  }
+
+  // Find earliest transaction for historical fetch range
+  const earliest = allTx.filter(t=>t.date).sort((a,b)=>a.date-b.date)[0];
+  const fromTs = earliest ? Math.floor(earliest.date.getTime()/1000) : Math.floor(Date.now()/1000) - 365*24*3600;
+
+  let live=0, fail=0, skip=0;
+
+  for (let i=0; i<holdings.length; i++) {
+    const h = holdings[i];
+    const ticker = getYahooTicker(h);
+    sb.textContent = 'Fetching ' + (i+1) + '/' + holdings.length + ': ' + h.name + '...';
+    if (!ticker) { skip++; continue; }
+
+    const result = await fetchYahooPrice(ticker);
+    if (result && result.price > 0) {
+      const cur = result.currency || h.currency;
+      livePrices[h.isin] = { price: result.price, currency: cur, priceSEK: toSEK(result.price, cur) };
+      live++;
+      await new Promise(r => setTimeout(r, 200));
+      const hist = await fetchYahooHistory(ticker, fromTs);
+      if (hist && hist.length) {
+        historicalPrices[h.isin] = hist.map(p => ({
+          date: p.date,
+          priceSEK: toSEK(p.close, p.currency || cur)
+        }));
+      }
+    } else { fail++; }
+    await new Promise(r => setTimeout(r, 300));
+  }
+
+  const now = new Date().toLocaleTimeString('sv-SE');
+  sb.textContent = 'Done: ' + live + ' live, ' + fail + ' failed, ' + skip + ' no ticker. Updated ' + now;
+  document.getElementById('last-updated').textContent = 'Updated ' + now;
+  btn.disabled=false; btn.textContent='⧳ Refresh Live Prices';
+  render();
+}
+
+// ── FILE HANDLING ────────────────────────────────────────────────────────────
+function processTransactions(txs){
+  if(!txs.length){alert('No transactions found. Make sure this is a DEGIRO transaction export.');return;}
+  allTx=txs;livePrices={};historicalPrices={};
+  document.getElementById('upload-zone').style.display='none';
+  document.getElementById('dashboard').style.display='block';
+  document.getElementById('last-updated').textContent=`${txs.length} transactions loaded`;
+  period='ALL';
+  document.querySelectorAll('.filter-btn').forEach(b=>b.classList.toggle('active',b.dataset.period==='ALL'));
+  render();
+}
+
+function handleFile(file){
+  if(!file)return;
+  const isExcel=file.name.endsWith('.xlsx')||file.name.endsWith('.xls');
+  if(isExcel){
+    const reader=new FileReader();
+    reader.onload=e=>{
+      try{processTransactions(parseXLSX(e.target.result));}
+      catch(err){alert('Error reading Excel: '+err.message);}
+    };
+    reader.readAsArrayBuffer(file);
+  }else{
+    const reader=new FileReader();
+    reader.onload=e=>{
+      try{processTransactions(parseCSVText(e.target.result));}
+      catch(err){alert('Error reading CSV: '+err.message);}
+    };
+    reader.readAsText(file,'UTF-8');
+  }
+}
+
+// ── EVENTS ───────────────────────────────────────────────────────────────────
+document.getElementById('file-input').addEventListener('change',e=>handleFile(e.target.files[0]));
+document.getElementById('file-input-2').addEventListener('change',e=>handleFile(e.target.files[0]));
+document.getElementById('upload-new-btn').addEventListener('click',()=>document.getElementById('file-input-2').click());
+document.getElementById('refresh-btn').addEventListener('click',refreshPrices);
+document.querySelectorAll('.filter-btn').forEach(btn=>btn.addEventListener('click',()=>{
+  period=btn.dataset.period;
+  document.querySelectorAll('.filter-btn').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');render();
+}));
+document.querySelectorAll('.tab-btn').forEach(btn=>btn.addEventListener('click',()=>{
+  document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
+  document.querySelectorAll('.tab-content').forEach(c=>c.classList.remove('active'));
+  btn.classList.add('active');
+  document.getElementById('tab-'+btn.dataset.tab).classList.add('active');
+}));
+const uz=document.getElementById('upload-zone');
+uz.addEventListener('dragover',e=>{e.preventDefault();uz.classList.add('dragover');});
+uz.addEventListener('dragleave',()=>uz.classList.remove('dragover'));
+uz.addEventListener('drop',e=>{e.preventDefault();uz.classList.remove('dragover');handleFile(e.dataTransfer.files[0]);});
+</script>
+</body>
+</html>
