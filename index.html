@@ -398,7 +398,7 @@ async function lookupFIGI(holdingsList) {
   for (const batch of batches) {
     try {
       const body = batch.map(h => ({ idType: 'ID_ISIN', idValue: h.isin }));
-      const resp = await fetch('https://api.openfigi.com/v3/mapping', {
+      const resp = await fetch(`${PROXY}/figi`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(body)
