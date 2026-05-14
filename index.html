@@ -430,29 +430,39 @@ async function lookupFIGI(holdingsList) {
 }
 
 // Map OpenFIGI exchCode to Yahoo Finance suffix
-function exchCodeToYahooSuffix(exchCode) {
-  const map = {
-    'GF': '.F',    // Frankfurt XETRA
+// AND fix ticker format issues (/ → -, remove exchange suffix from ticker)
+function figiToYahooTicker(ticker, exchCode) {
+  // Clean ticker — remove any exchange suffix OpenFIGI appends
+  const cleanTicker = ticker
+    .replace(/\.UN$|\.UW$|\.US$|\.NA$|\.LN$|\.GF$|\.SM$|\.SS$|\.SW$|\.BB$|\.FP$/, '')
+    .replace(/\//g, '-'); // BRK/B → BRK-B
+
+  const suffixMap = {
+    'GF': '.DE',   // Frankfurt XETRA → Yahoo uses .DE
     'EB': '.DE',   // Frankfurt
-    'AS': '.AS',   // Amsterdam
+    'AS': '.AS',   // Amsterdam Euronext
+    'NA': '.AS',   // Amsterdam
     'LN': '.L',    // London
     'SM': '.MI',   // Milan
     'SS': '.ST',   // Stockholm
     'SW': '.SW',   // Swiss
-    'NA': '.AS',   // Amsterdam
     'BB': '.BR',   // Brussels
-    'UN': '',      // NYSE
-    'UW': '',      // NASDAQ
+    'FP': '.PA',   // Paris
+    'UN': '',      // NYSE — no suffix
+    'UW': '',      // NASDAQ — no suffix
     'US': '',      // US generic
+    'DEG': '.DE',  // DEGIRO Frankfurt
+    'EAM': '.AS',  // Euronext Amsterdam
   };
-  return map[exchCode] || '';
+
+  const suffix = suffixMap[exchCode] || '';
+  return cleanTicker + suffix;
 }
 
 function getYahooTickerFromFIGI(isin) {
   const f = figiCache[isin];
   if (!f) return null;
-  const suffix = exchCodeToYahooSuffix(f.exchCode);
-  return f.ticker + suffix;
+  return figiToYahooTicker(f.ticker, f.exchCode);
 }
 
 async function fetchYahooPrice(symbol) {
