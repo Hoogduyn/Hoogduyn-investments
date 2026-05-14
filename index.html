@@ -364,7 +364,11 @@ function toSEK(price,currency){
   return price*(fx[currency]||1);
 }
 
-const ISIN_TO_YAHOO = {}; // OpenFIGI handles all lookups automatically
+const ISIN_TO_YAHOO = {
+  'IE00BLPK3577': 'WCBR.MI',   // WisdomTree Cybersecurity — Milan
+  'IE000OJ5TQP4': 'ASWC.DE',   // Future of Defence — Frankfurt
+  'IE00BMC38736': 'SMH.MI',    // VanEck Semiconductor — Milan
+};
 
 // ── YAHOO FINANCE via Cloudflare Worker proxy ────────────────────────────────
 const PROXY = 'https://test.rhoogduijn.workers.dev';
