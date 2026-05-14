@@ -744,13 +744,23 @@ function buildRealTimeline(fromDate){
   // sum over all holdings of (shares held on that date * closing price on that date)
   const points = [];
 
+  // Pre-calculate cash flows per date (buys = positive, sells = negative)
+  const cashFlows = {};
+  for(const tx of allTx){
+    if(!tx.date) continue;
+    const d = tx.date.toISOString().slice(0,10);
+    cashFlows[d] = (cashFlows[d] || 0) + (tx.shares > 0 ? Math.abs(tx.totalSEK) : -Math.abs(tx.totalSEK));
+  }
+
+  let twrFactor = 1.0; // Cumulative TWR factor
+  let prevValue = 0;
+
   for(const dateStr of sortedDates){
     const date = new Date(dateStr);
     if(fromDate && date < fromDate) continue;
 
     let totalValue = 0;
     for(const h of holdings){
-      // Calculate shares held on this date from transactions
       let sharesOnDate = 0;
       for(const tx of allTx){
         if(tx.isin === h.isin && tx.date && tx.date <= date){
@@ -759,10 +769,8 @@ function buildRealTimeline(fromDate){
       }
       if(sharesOnDate <= 0) continue;
 
-      // Find closest historical price on or before this date
       const hist = historicalPrices[h.isin+'|'+h.exchange];
       if(!hist) {
-        // No price data — use cost basis as fallback
         const costOnDate = allTx
           .filter(tx => tx.isin === h.isin && tx.date && tx.date <= date)
           .reduce((sum, tx) => sum + (tx.shares > 0 ? Math.abs(tx.totalSEK) : -Math.abs(tx.totalSEK)), 0);
@@ -774,7 +782,17 @@ function buildRealTimeline(fromDate){
       if(priceEntry) totalValue += sharesOnDate * priceEntry.priceSEK;
     }
 
-    points.push({ dateStr, value: totalValue });
+    // TWR: neutralize cash flows when calculating daily return
+    // On days with cash flows, denominator = prev value + cash flow added that day
+    const cf = cashFlows[dateStr] || 0;
+    const denominator = prevValue + (cf > 0 ? cf : 0); // only add inflows to denominator
+    if(denominator > 0 && prevValue > 0) {
+      const dailyReturn = totalValue / denominator;
+      twrFactor *= dailyReturn;
+    }
+    prevValue = totalValue;
+
+    points.push({ dateStr, value: totalValue, twr: (twrFactor - 1) * 100 });
   }
 
   // The last historical point is already today's data (most recent candle)
@@ -833,7 +851,7 @@ function renderGainsChart(invested,current,returnPct){
       const { ctx, chartArea: { top, bottom, left, right } } = chart;
       const cx = (left + right) / 2;
       const cy = (top + bottom) / 2;
-      const pct = invested > 0 ? ((gain / invested) * 100) : 0;
+      const pct = (returnPct !== undefined && isFinite(returnPct)) ? returnPct : (invested > 0 ? ((gain / invested) * 100) : 0);
       ctx.save();
       ctx.font = "700 1rem 'Syne', sans-serif";
       ctx.fillStyle = gainColor;
@@ -918,15 +936,17 @@ function renderTimeline(points){
 
   let portfolioValues, yCallback, tooltipCallback;
   if(chartMode === 'return') {
-    // Use first VALID non-zero point as base
-    const firstValid = points.find(p => p.value > 100); // ignore near-zero starting points
-    const base = firstValid ? firstValid.value : (portfolioBase > 0 ? portfolioBase : 1);
-    portfolioValues = points.map(p => base > 0 ? ((p.value - base) / base * 100) : 0);
-    // Cap at reasonable range to avoid division-by-tiny-number artifacts
-    const cap = 500;
-    portfolioValues = portfolioValues.map(v => Math.max(-100, Math.min(cap, v)));
+    // Use Time-Weighted Return (TWR) if available, otherwise fall back to simple return
+    const hasTWR = points.length > 0 && points[0].twr !== undefined;
+    if(hasTWR) {
+      portfolioValues = points.map(p => p.twr ?? 0);
+    } else {
+      const firstValid = points.find(p => p.value > 100);
+      const base = firstValid ? firstValid.value : (portfolioBase > 0 ? portfolioBase : 1);
+      portfolioValues = points.map(p => base > 0 ? ((p.value - base) / base * 100) : 0);
+    }
     yCallback = v => (v >= 0 ? '+' : '') + v.toFixed(1) + '%';
-    tooltipCallback = c => ' Portfolio: ' + (c.raw >= 0 ? '+' : '') + c.raw.toFixed(2) + '%';
+    tooltipCallback = c => ' TWR: ' + (c.raw >= 0 ? '+' : '') + c.raw.toFixed(2) + '%';
   } else {
     portfolioValues = points.map(p => p.value);
     yCallback = v => fmt(v, true);
