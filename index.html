@@ -1378,6 +1378,8 @@ function getYahooTicker(h) {
   }
 
   // Look up any unknown ISINs via OpenFIGI
+  // Clear FIGI cache so it re-runs with correct execPlace from CSV
+  Object.keys(figiCache).forEach(k => delete figiCache[k]);
   sb.textContent = 'Looking up tickers via OpenFIGI...';
   await lookupFIGI(holdings);
 
