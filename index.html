@@ -252,7 +252,6 @@
           <th onclick="sortHoldings('value')" style="cursor:pointer">Value (SEK) ↕</th>
           <th onclick="sortHoldings('gain')" style="cursor:pointer">Gain / Loss ↕</th>
           <th>Today</th>
-          <th>52W Range</th>
         </tr></thead>
         <tbody id="holdings-tbody"></tbody>
       </table>
@@ -1290,16 +1289,12 @@ function renderHoldings(hs){
       <td><div class="stock-name">${h.name}</div><div class="stock-isin">${h.isin}${h.exchange?' &nbsp;•&nbsp; <span style="color:var(--accent2);font-size:0.65rem">'+h.exchange+'</span>':''}</div></td>
       <td><span class="sector-badge" style="background:${sc(h.sector)}18;border:1px solid ${sc(h.sector)}40;color:${sc(h.sector)}">${h.sector}</span></td>
       <td>${Number.isInteger(h.shares) ? h.shares : h.shares.toFixed(4)}</td>
+      <td>${fmt(Math.max(h.costSEK,0))}</td>
       <td>${bepCell}</td>
       <td>${priceCell}</td>
-      <td>${fmt(Math.max(h.costSEK,0))}</td>
       <td>${valCell}</td>
       <td>${gainCell}</td>
       <td>${dailyCell}</td>
-      <td>${lp && lp.high52w && lp.low52w
-        ? `<span style="font-size:0.68rem;color:var(--muted)">${lp.low52w.toFixed(0)} – ${lp.high52w.toFixed(0)} ${lp.currency}</span>`
-        : '<span class="no-ticker">—</span>'
-      }</td>
     </tr>`;
   }).join('');
 }
@@ -1442,6 +1437,7 @@ function getYahooTicker(h) {
       live++;
       await new Promise(r => setTimeout(r, 200));
       const hist = await fetchYahooHistory(ticker, fromTs);
+      console.log(`History [${ticker}]: ${hist ? hist.length + ' points' : 'null'}`);
       if (hist && hist.length) {
         historicalPrices[h.isin+'|'+h.exchange] = hist.map(p => ({
           date: p.date,
