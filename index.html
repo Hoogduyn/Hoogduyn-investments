@@ -473,7 +473,10 @@ async function fetchYahooPrice(symbol) {
     if (!resp.ok) return null;
     const data = await resp.json();
     const q = data?.quoteResponse?.result?.[0];
-    if (!q || !q.regularMarketPrice) return null;
+    if (!q || !q.regularMarketPrice) {
+      console.error(`Yahoo quote failed [${symbol}]:`, JSON.stringify(data).slice(0, 200));
+      return null;
+    }
 
     const price = q.regularMarketPrice;
     const currency = q.currency;
@@ -498,7 +501,7 @@ async function fetchYahooPrice(symbol) {
       marketChange: regularMarketChange,
       marketChangePct: regularMarketChangePercent,
       marketState, tradedToday, high52w, low52w };
-  } catch(e) { return null; }
+  } catch(e) { console.error(`Yahoo quote error [${symbol}]:`, e); return null; }
 }
 
 async function fetchYahooHistory(symbol, fromTimestamp) {
