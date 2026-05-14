@@ -628,7 +628,7 @@ function parseCSVText(text){
     if(!name||!isin||isin.length<5)continue;
     const antal=parseNum(c[6]);
     if(antal===0)continue;
-    const totalSEK=parseNum(c[15]||c[14]||'0');
+    const totalAccount=parseNum(c[15]||c[14]||'0'); // Total in account currency (SEK or EUR)
     const priceLocal = parseNum(c[7]);
     const exchange = (c[4]||'').trim(); // Referensbörs e.g. XET, OMX, NSY
     const execPlace = (c[5]||'').trim(); // e.g. XETA, XAMS, ETFP, XLON
@@ -637,7 +637,7 @@ function parseCSVText(text){
       name,isin,shares:antal,
       currency:(c[8]||'SEK').trim().replace(/[^A-Za-z]/g,''),
       priceLocal, exchange, execPlace,
-      totalSEK,
+      totalSEK: totalAccount,
     });
   }
   return rows;
@@ -657,7 +657,7 @@ function parseXLSX(arrayBuffer){
     if(!name||!isin||isin.length<5)continue;
     const antal=parseNum(c[6]);
     if(antal===0)continue;
-    const totalSEK=parseNum(c[15]||c[14]||0);
+    const totalAccount=parseNum(c[15]||c[14]||0);
     const dateStr=String(c[0]||'').trim();
     const priceLocal = parseNum(c[7]);
     const exchange = String(c[4]||'').trim();
@@ -667,7 +667,7 @@ function parseXLSX(arrayBuffer){
       name,isin,shares:antal,
       currency:String(c[8]||'SEK').trim().replace(/[^A-Za-z]/g,''),
       priceLocal, exchange, execPlace,
-      totalSEK,
+      totalSEK: totalAccount,
     });
   }
   return result;
@@ -1128,7 +1128,7 @@ function getFromDate(p){
 }
 
 // ── STATE ────────────────────────────────────────────────────────────────────
-let allTx=[],period='ALL',livePrices={},historicalPrices={},historicalFX={},holdings=[];
+let allTx=[],period='ALL',livePrices={},historicalPrices={},historicalFX={},holdings=[],accountCurrency='SEK';
 let sortCol='value',sortDir=-1;
 
 function render(){
