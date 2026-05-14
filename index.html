@@ -364,36 +364,7 @@ function toSEK(price,currency){
   return price*(fx[currency]||1);
 }
 
-const ISIN_TO_YAHOO = {
-    // From your holdings
-    'DE0007030009': 'RHM.DE',        // Rheinmetall AG - Frankfurt
-    'US81762P1021': 'NOW',           // ServiceNow
-    'US79466L3024': 'CRM',           // Salesforce
-    'US30303M1027': 'META',          // Meta Platforms
-    'NL0010273215': 'ASML.AS',          // ASML Holding
-    'CNE100000296': 'BY6.F',       // BYD - Hong Kong (non-tradeable, may fail)
-    'US67066G1040': 'NVDA',          // NVIDIA
-    'IE000OJ5TQP4': 'ASWC.DE',        // Future of Defence UCITS ETF - London
-    'US5738741041': 'MRVL',          // Marvell Technology
-    'US0846707026': 'BRK-B',         // Berkshire Hathaway B
-    'IE00BLPK3577': 'WCBR.MI',          // WisdomTree Cybersecurity ETF
-    'US60937P1066': 'MDB',           // MongoDB
-    'US0079031078': 'AMD',           // Advanced Micro Devices
-    'US02079K3059': 'GOOGL',         // Alphabet
-    'IE00BKX55T58': 'VGVE.DE',           // Vanguard FTSE Developed World ETF
-    'IE00BMC38736': 'VVSM.DE',           // VanEck Semiconductor ETF
-    // Extra common ones
-    'US5949181045': 'MSFT',
-    'US0378331005': 'AAPL',
-    'US0167066592': 'NVDA',
-    'US38259P5089': 'GOOGL',
-    'US0231351067': 'AMZN',
-    'US88160R1014': 'TSLA',
-    'US46625H1005': 'JPM',
-    'US70450Y1038': 'PLTR',
-    'US22788C1053': 'CRWD',
-    'US64110L1061': 'NFLX',
-  };
+const ISIN_TO_YAHOO = {}; // OpenFIGI handles all lookups
 
 // ── YAHOO FINANCE via Cloudflare Worker proxy ────────────────────────────────
 const PROXY = 'https://test.rhoogduijn.workers.dev';
@@ -401,20 +372,32 @@ const PROXY = 'https://test.rhoogduijn.workers.dev';
 // ── OPENFIGI — automatic ISIN → ticker mapping ────────────────────────────────
 const figiCache = {}; // isin → { ticker, exchCode, currency }
 
-async function lookupFIGI(isins) {
-  // Filter out already cached or manually mapped
-  const toLookup = isins.filter(isin => !figiCache[isin] && !ISIN_TO_YAHOO[isin]);
+async function lookupFIGI(holdingsList) {
+  // Run for all holdings — use DEGIRO exchange to pick correct listing
+  const toLookup = holdingsList.filter(h => !figiCache[h.isin]);
   if (!toLookup.length) return;
 
-  // OpenFIGI allows 10 per request, batch them
   const batches = [];
   for (let i = 0; i < toLookup.length; i += 10) {
     batches.push(toLookup.slice(i, i + 10));
   }
 
+  // Map DEGIRO exchange codes to OpenFIGI exchCode
+  const degiroToFigi = {
+    'XET': ['EB','GF'],   // Frankfurt XETRA
+    'NSY': ['UN'],         // NYSE
+    'NDQ': ['UW'],         // NASDAQ
+    'OMX': ['SS'],         // Stockholm
+    'AMS': ['NA','AS'],    // Amsterdam
+    'MIL': ['SM'],         // Milan
+    'LSE': ['LN'],         // London
+    'EPA': ['FP'],         // Paris
+    'EBR': ['BB'],         // Brussels
+  };
+
   for (const batch of batches) {
     try {
-      const body = batch.map(isin => ({ idType: 'ID_ISIN', idValue: isin }));
+      const body = batch.map(h => ({ idType: 'ID_ISIN', idValue: h.isin }));
       const resp = await fetch('https://api.openfigi.com/v3/mapping', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -423,22 +406,26 @@ async function lookupFIGI(isins) {
       if (!resp.ok) continue;
       const data = await resp.json();
       data.forEach((result, i) => {
-        const isin = batch[i];
+        const h = batch[i];
         if (result.data && result.data.length) {
-          // Prefer listings on major exchanges
-          const preferred = result.data.find(d =>
-            ['UN','UW','US','EB','GF','AS','LN','SM','SW','SS'].includes(d.exchCode)
+          // Try to match DEGIRO's exchange first
+          const preferredCodes = degiroToFigi[h.exchange] || [];
+          let preferred = result.data.find(d => preferredCodes.includes(d.exchCode));
+          // Fallback: pick any major exchange
+          if (!preferred) preferred = result.data.find(d =>
+            ['UN','UW','US','EB','GF','AS','LN','SM','SW','SS','NA'].includes(d.exchCode)
           ) || result.data[0];
-          figiCache[isin] = {
+          figiCache[h.isin] = {
             ticker: preferred.ticker,
             exchCode: preferred.exchCode,
             currency: preferred.currency,
             name: preferred.name
           };
+          console.log(`FIGI: ${h.name} (${h.isin}) → ${preferred.ticker}.${preferred.exchCode} [${h.exchange}]`);
         }
       });
-    } catch(e) {}
-    await new Promise(r => setTimeout(r, 500)); // rate limit
+    } catch(e) { console.error('FIGI error:', e); }
+    await new Promise(r => setTimeout(r, 500));
   }
 }
 
@@ -1297,12 +1284,19 @@ async function refreshPrices(){
   // Swedish stocks: SAAB-B.ST, VOLV-B.ST
   // For unmapped ISINs, try guessing Yahoo ticker from name
 function getYahooTicker(h) {
-    const manual = ISIN_TO_YAHOO[h.isin];
-    if (manual) return manual;
-    // Try OpenFIGI cache
-    const figi = getYahooTickerFromFIGI(h.isin);
-    if (figi) return figi;
-    // Fallback guesses
+    // Use OpenFIGI result — exchange-matched is most reliable
+    const f = figiCache[h.isin];
+    const degiroToFigi = {
+      'XET':['EB','GF'], 'NSY':['UN'], 'NDQ':['UW'],
+      'OMX':['SS'], 'AMS':['NA','AS'], 'MIL':['SM'],
+      'LSE':['LN'], 'EPA':['FP'], 'EBR':['BB']
+    };
+    const preferredCodes = degiroToFigi[h.exchange] || [];
+    if (f && preferredCodes.includes(f.exchCode)) {
+      return getYahooTickerFromFIGI(h.isin); // best — exchange matched
+    }
+    if (f) return getYahooTickerFromFIGI(h.isin); // FIGI found but exchange unmatched
+    // Fallback for US stocks
     if (h.isin.startsWith('US')) {
       return h.name.split(' ')[0].toUpperCase().replace(/[^A-Z]/g,'');
     }
@@ -1310,9 +1304,8 @@ function getYahooTicker(h) {
   }
 
   // Look up any unknown ISINs via OpenFIGI
-  const allISINs = holdings.map(h => h.isin);
   sb.textContent = 'Looking up tickers via OpenFIGI...';
-  await lookupFIGI(allISINs);
+  await lookupFIGI(holdings);
 
   // Find earliest transaction for historical fetch range
   const earliest = allTx.filter(t=>t.date).sort((a,b)=>a.date-b.date)[0];
