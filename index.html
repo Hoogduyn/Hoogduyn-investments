@@ -467,7 +467,7 @@ function getYahooTickerFromFIGI(isin) {
 
 async function fetchYahooPrice(symbol) {
   try {
-    const url = `${PROXY}?symbol=${encodeURIComponent(symbol)}&range=5d&interval=1d`;
+    const url = `${PROXY}?symbol=${encodeURIComponent(symbol)}&range=1d&interval=5m`;
     const resp = await fetch(url);
     if (!resp.ok) return null;
     const data = await resp.json();
@@ -1071,7 +1071,7 @@ function render(){
   const dailyCard = document.getElementById('kpi-card-daily');
   if(hasDailyData) {
     const prevTotal = current - dailyChange;
-    const dailyPct = prevTotal > 0 ? (dailyChange / prevTotal * 100) : 0;
+    let dailyPct = prevTotal > 0 ? (dailyChange / prevTotal * 100) : 0;
     dailyEl.textContent = (dailyChange >= 0 ? '+' : '') + fmt(dailyChange);
     dailyEl.className = 'kpi-value ' + (dailyChange >= 0 ? 'gain-text' : 'loss-text');
     dailyPctEl.textContent = (dailyPct >= 0 ? '+' : '') + dailyPct.toFixed(2) + '% · ' + dailyCount + ' stocks';
@@ -1239,7 +1239,10 @@ function renderHoldings(hs){
       // Use Yahoo's dividend-adjusted change values
       const dailyChgLocal = lp.marketChange != null ? lp.marketChange * h.shares : (lp.price - lp.prevClose) * h.shares;
       const dailyChgSEK = toSEK(dailyChgLocal, lp.currency);
-      const dailyPct = lp.marketChangePct != null ? lp.marketChangePct : (lp.prevClose > 0 ? ((lp.price - lp.prevClose) / lp.prevClose * 100) : 0);
+      // Yahoo returns regularMarketChangePercent as decimal e.g. 0.0081 = 0.81%
+      // Multiply by 100 if it looks like a decimal (abs value < 1 for normal daily moves)
+      let rawPct = lp.marketChangePct != null ? lp.marketChangePct : (lp.prevClose > 0 ? ((lp.price - lp.prevClose) / lp.prevClose * 100) : 0);
+      const dailyPct = (Math.abs(rawPct) < 0.5 && Math.abs(rawPct) > 0) ? rawPct * 100 : rawPct;
       const stateIcon = lp.marketState === 'REGULAR' ? '🟢' : lp.marketState === 'PRE' ? '🟡' : '🔵';
       dailyCell = `<span class="${dailyChgSEK>=0?'gain-text':'loss-text'}">${dailyChgSEK>=0?'+':''}${fmt(dailyChgSEK)}<br><small>${dailyPct>=0?'+':''}${dailyPct.toFixed(2)}% ${stateIcon}</small></span>`;
     } else if(lp && !lp.tradedToday) {
@@ -1249,7 +1252,7 @@ function renderHoldings(hs){
     return`<tr>
       <td><div class="stock-name">${h.name}</div><div class="stock-isin">${h.isin}${h.exchange?' &nbsp;•&nbsp; <span style="color:var(--accent2);font-size:0.65rem">'+h.exchange+'</span>':''}</div></td>
       <td><span class="sector-badge" style="background:${sc(h.sector)}18;border:1px solid ${sc(h.sector)}40;color:${sc(h.sector)}">${h.sector}</span></td>
-      <td>${h.shares.toFixed(4)}</td>
+      <td>${Number.isInteger(h.shares) ? h.shares : h.shares.toFixed(4)}</td>
       <td>${bepCell}</td>
       <td>${priceCell}</td>
       <td>${fmt(Math.max(h.costSEK,0))}</td>
@@ -1272,7 +1275,7 @@ function renderHistory(){
       <td>${tx.dateStr}</td>
       <td><div class="stock-name">${tx.name}</div><div class="stock-isin">${tx.isin}</div></td>
       <td><span style="color:${isBuy?'var(--gain)':'var(--loss)'};font-weight:500">${isBuy?'BUY':'SELL'}</span></td>
-      <td>${Math.abs(tx.shares).toFixed(4)}</td>
+      <td>${Number.isInteger(tx.shares) ? Math.abs(tx.shares) : Math.abs(tx.shares).toFixed(4)}</td>
       <td>${tx.priceLocal ? tx.priceLocal.toFixed(2) : '—'}</td>
       <td>${tx.currency}</td>
       <td><span style="color:var(--accent2);font-size:0.72rem">${tx.exchange||'—'}</span></td>
