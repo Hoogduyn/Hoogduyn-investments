@@ -397,15 +397,25 @@ async function lookupFIGI(holdingsList) {
 
   for (const batch of batches) {
     try {
-      // Include MIC (market identifier code) for precise exchange matching
-      const micMap = {
-        'XETA': 'XETR', 'XETR': 'XETR', 'XAMS': 'XAMS', 'XLON': 'XLON',
-        'ETFP': 'XMIL', 'XMIL': 'XMIL', 'XPAR': 'XPAR', 'XSTO': 'XSTO',
+      // OpenFIGI: use micCode (from execution place) + currency for precise match
+      // Note: cannot use exchCode and micCode together
+      const execToMic = {
+        'XETA': 'XETR', 'XETR': 'XETR',
+        'XAMS': 'XAMS',
+        'XLON': 'XLON',
+        'ETFP': 'XMIL', 'XMIL': 'XMIL',
+        'XPAR': 'XPAR',
+        'XSTO': 'XSTO',
+        'MESI': 'XSTO',
+        'XNYS': 'XNYS',
+        'XNAS': 'XNAS',
       };
       const body = batch.map(h => {
         const req = { idType: 'ID_ISIN', idValue: h.isin };
-        const mic = micMap[h.execPlace];
+        const mic = execToMic[h.execPlace];
         if (mic) req.micCode = mic;
+        // Add currency to narrow results further
+        if (h.currency && h.currency !== 'SEK') req.currency = h.currency;
         return req;
       });
       const resp = await fetch(`${PROXY}/figi`, {
@@ -431,7 +441,8 @@ async function lookupFIGI(holdingsList) {
             currency: preferred.currency,
             name: preferred.name
           };
-          console.log(`FIGI: ${h.name} (${h.isin}) → ${preferred.ticker}.${preferred.exchCode} [${h.exchange}]`);
+          const yahooTicker = figiToYahooTicker(preferred.ticker, preferred.exchCode);
+      console.log(`FIGI: ${h.name} (${h.isin}) → ${preferred.ticker} [${preferred.exchCode}] mic=${h.execPlace} cur=${h.currency} → Yahoo: ${yahooTicker}`);
         }
       });
     } catch(e) { console.error('FIGI error:', e); }
