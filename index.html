@@ -397,7 +397,17 @@ async function lookupFIGI(holdingsList) {
 
   for (const batch of batches) {
     try {
-      const body = batch.map(h => ({ idType: 'ID_ISIN', idValue: h.isin }));
+      // Include MIC (market identifier code) for precise exchange matching
+      const micMap = {
+        'XETA': 'XETR', 'XETR': 'XETR', 'XAMS': 'XAMS', 'XLON': 'XLON',
+        'ETFP': 'XMIL', 'XMIL': 'XMIL', 'XPAR': 'XPAR', 'XSTO': 'XSTO',
+      };
+      const body = batch.map(h => {
+        const req = { idType: 'ID_ISIN', idValue: h.isin };
+        const mic = micMap[h.execPlace];
+        if (mic) req.micCode = mic;
+        return req;
+      });
       const resp = await fetch(`${PROXY}/figi`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -605,7 +615,7 @@ function parseCSVText(text){
       date:parseDate(c[0]),dateStr:(c[0]||'').trim(),
       name,isin,shares:antal,
       currency:(c[8]||'SEK').trim().replace(/[^A-Za-z]/g,''),
-      priceLocal, exchange,
+      priceLocal, exchange, execPlace,
       totalSEK,
     });
   }
@@ -630,11 +640,12 @@ function parseXLSX(arrayBuffer){
     const dateStr=String(c[0]||'').trim();
     const priceLocal = parseNum(c[7]);
     const exchange = String(c[4]||'').trim();
+    const execPlace = String(c[5]||'').trim();
     result.push({
       date:parseDate(dateStr),dateStr,
       name,isin,shares:antal,
       currency:String(c[8]||'SEK').trim().replace(/[^A-Za-z]/g,''),
-      priceLocal, exchange,
+      priceLocal, exchange, execPlace,
       totalSEK,
     });
   }
@@ -652,7 +663,7 @@ function buildHoldings(transactions,fromDate){
       name:tx.name, isin:tx.isin, shares:0,
       totalBuyShares:0, totalBuyCost:0, totalBuyCostLocal:0,
       costSEK:0, sector:guessSector(tx.name, tx.isin), currency:tx.currency,
-      exchange:tx.exchange||''
+      exchange:tx.exchange||'', execPlace:tx.execPlace||''
     };
     const h=map[key];
     h.shares+=tx.shares;
@@ -1325,12 +1336,26 @@ function getYahooTicker(h) {
       .replace(/\//g, '-');
 
     // Override suffix based on DEGIRO exchange — this is where YOU actually bought it
+    // Execution place is more precise than exchange code
+    const execPlaceSuffix = {
+      'XETA': '.DE', 'XETR': '.DE',  // Frankfurt XETRA
+      'XAMS': '.AS',                   // Amsterdam
+      'XLON': '.L',                    // London
+      'ETFP': '.MI', 'XMIL': '.MI',   // Milan
+      'XPAR': '.PA',                   // Paris
+      'XSTO': '.ST',                   // Stockholm
+      'XBRU': '.BR',                   // Brussels
+    };
     const degiroSuffix = {
       'XET': '.DE', 'NSY': '',   'NDQ': '',   'OMX': '.ST',
       'AMS': '.AS', 'MIL': '.MI','LSE': '.L', 'EPA': '.PA',
-      'EBR': '.BR', 'DEG': '.F', 'EAM': '.AS', 'TDG': '.F',  'GRE': '.DE',
+      'EBR': '.BR', 'DEG': '.F', 'EAM': '.AS', 'TDG': '.F', 'GRE': '.DE',
     };
 
+    // Use execution place first (most precise), then exchange code
+    if (h.execPlace && execPlaceSuffix[h.execPlace] !== undefined) {
+      return cleanTicker + execPlaceSuffix[h.execPlace];
+    }
     if (h.exchange && degiroSuffix[h.exchange] !== undefined) {
       return cleanTicker + degiroSuffix[h.exchange];
     }
