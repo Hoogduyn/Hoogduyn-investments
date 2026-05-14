@@ -852,7 +852,11 @@ function destroyCharts(){Object.values(charts).forEach(c=>c.destroy());charts={}
 
 function renderSectorChart(holdings){
   const sec={};
-  for(const h of holdings)sec[h.sector]=(sec[h.sector]||0)+Math.max(h.costSEK,0);
+  for(const h of holdings){
+    const lp = livePrices[h.isin+'|'+h.exchange];
+    const val = lp ? lp.priceSEK * h.shares : Math.max(h.costSEK, 0);
+    sec[h.sector] = (sec[h.sector]||0) + val;
+  }
   const labels=Object.keys(sec),vals=Object.values(sec),total=vals.reduce((a,b)=>a+b,0);
   const colors=labels.map(sc);
   charts.sector=new Chart(document.getElementById('sector-chart').getContext('2d'),{
