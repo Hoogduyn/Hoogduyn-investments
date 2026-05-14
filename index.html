@@ -623,6 +623,7 @@ function parseCSVText(text){
     const totalSEK=parseNum(c[15]||c[14]||'0');
     const priceLocal = parseNum(c[7]);
     const exchange = (c[4]||'').trim(); // Referensbörs e.g. XET, OMX, NSY
+    const execPlace = (c[5]||'').trim(); // e.g. XETA, XAMS, ETFP, XLON
     rows.push({
       date:parseDate(c[0]),dateStr:(c[0]||'').trim(),
       name,isin,shares:antal,
