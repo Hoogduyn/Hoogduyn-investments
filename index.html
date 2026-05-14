@@ -395,7 +395,8 @@ const figiCache = {}; // isin → { ticker, exchCode, currency }
 
 async function lookupFIGI(holdingsList) {
   // Run for all holdings — use DEGIRO exchange to pick correct listing
-  const toLookup = holdingsList.filter(h => !figiCache[h.isin]);
+  // Skip US stocks — first-word ticker fallback is more reliable than FIGI for these
+  const toLookup = holdingsList.filter(h => !figiCache[h.isin] && !h.isin.startsWith('US'));
   if (!toLookup.length) return;
 
   const batches = [];
@@ -1445,6 +1446,13 @@ function getYahooTicker(h) {
     const f = figiCache[h.isin];
     if (!f) {
       // Fallback for US stocks
+      if (h.isin.startsWith('US')) return h.name.split(' ')[0].toUpperCase().replace(/[^A-Z]/g,'');
+      return null;
+    }
+
+    // Sanity check — if ticker looks wrong (too long or has spaces), use fallback
+    const rawTicker = f.ticker.replace(/\//g, '-').replace(/\..*$/, '');
+    if (rawTicker.length > 5 || rawTicker.includes(' ') || rawTicker === rawTicker.toUpperCase() && rawTicker.length > 4 && !['GOOGL','MRVL','BRK-B','ASWC','WCBR','VEVE','VVSM'].includes(rawTicker)) {
       if (h.isin.startsWith('US')) return h.name.split(' ')[0].toUpperCase().replace(/[^A-Z]/g,'');
       return null;
     }
