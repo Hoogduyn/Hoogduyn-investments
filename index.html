@@ -806,8 +806,34 @@ function buildRealTimeline(fromDate){
     points.push({ dateStr, value, twr: subPeriodStartValue > 0 ? (twrFactor * (value / subPeriodStartValue) - 1) * 100 : 0 });
   }
 
-  // The last historical point is already today's data (most recent candle)
-  // No need to add a separate live price endpoint — it causes a spike due to FX differences
+  // Add today's live price as final point
+  if(points.length > 0 && Object.keys(livePrices).length > 0){
+    let todayValue = 0;
+    let hasLive = false;
+    for(const h of holdings){
+      const lp = livePrices[h.isin+'|'+h.exchange];
+      if(lp) { todayValue += lp.priceSEK * h.shares; hasLive = true; }
+      else todayValue += Math.max(h.costSEK, 0);
+    }
+    if(hasLive) {
+      const todayStr = new Date().toISOString().slice(0,10);
+      const lastPoint = points[points.length-1];
+      // Only add if different from last point
+      if(lastPoint.dateStr !== todayStr) {
+        // TWR: chain from last sub-period
+        const twrPct = subPeriodStartValue > 0
+          ? (twrFactor * (todayValue / subPeriodStartValue) - 1) * 100
+          : lastPoint.twr || 0;
+        points.push({ dateStr: todayStr, value: todayValue, twr: twrPct });
+      } else {
+        // Update last point with live value
+        lastPoint.value = todayValue;
+        lastPoint.twr = subPeriodStartValue > 0
+          ? (twrFactor * (todayValue / subPeriodStartValue) - 1) * 100
+          : lastPoint.twr || 0;
+      }
+    }
+  }
 
   // If fromDate set, prepend a start anchor
   if(fromDate && points.length > 0){
@@ -875,6 +901,8 @@ function renderGainsChart(invested,current,returnPct){
       ctx.restore();
     }
   };
+  // Unregister old plugin before registering new one
+  try { Chart.unregister({id:'gainsCenter'}); } catch(e) {}
   Chart.register(centerTextPlugin);
 
   charts.gains = new Chart(document.getElementById('gains-chart').getContext('2d'), {
