@@ -1294,23 +1294,31 @@ async function refreshPrices(){
   // Swedish stocks: SAAB-B.ST, VOLV-B.ST
   // For unmapped ISINs, try guessing Yahoo ticker from name
 function getYahooTicker(h) {
-    // Use OpenFIGI result — exchange-matched is most reliable
     const f = figiCache[h.isin];
-    const degiroToFigi = {
-      'XET':['EB','GF'], 'NSY':['UN'], 'NDQ':['UW'],
-      'OMX':['SS'], 'AMS':['NA','AS'], 'MIL':['SM'],
-      'LSE':['LN'], 'EPA':['FP'], 'EBR':['BB']
+    if (!f) {
+      // Fallback for US stocks
+      if (h.isin.startsWith('US')) return h.name.split(' ')[0].toUpperCase().replace(/[^A-Z]/g,'');
+      return null;
+    }
+
+    // Get clean base ticker from FIGI
+    const cleanTicker = f.ticker
+      .replace(/\.UN$|\.UW$|\.US$|\.NA$|\.LN$|\.GF$|\.SM$|\.SS$|\.SW$|\.BB$|\.FP$/, '')
+      .replace(/\//g, '-');
+
+    // Override suffix based on DEGIRO exchange — this is where YOU actually bought it
+    const degiroSuffix = {
+      'XET': '.DE', 'NSY': '',   'NDQ': '',   'OMX': '.ST',
+      'AMS': '.AS', 'MIL': '.MI','LSE': '.L', 'EPA': '.PA',
+      'EBR': '.BR', 'DEG': '.DE','EAM': '.AS',
     };
-    const preferredCodes = degiroToFigi[h.exchange] || [];
-    if (f && preferredCodes.includes(f.exchCode)) {
-      return getYahooTickerFromFIGI(h.isin); // best — exchange matched
+
+    if (h.exchange && degiroSuffix[h.exchange] !== undefined) {
+      return cleanTicker + degiroSuffix[h.exchange];
     }
-    if (f) return getYahooTickerFromFIGI(h.isin); // FIGI found but exchange unmatched
-    // Fallback for US stocks
-    if (h.isin.startsWith('US')) {
-      return h.name.split(' ')[0].toUpperCase().replace(/[^A-Z]/g,'');
-    }
-    return null;
+
+    // Fall back to FIGI's own exchCode mapping
+    return figiToYahooTicker(f.ticker, f.exchCode);
   }
 
   // Look up any unknown ISINs via OpenFIGI
@@ -1330,6 +1338,7 @@ function getYahooTicker(h) {
   for (let i=0; i<holdings.length; i++) {
     const h = holdings[i];
     const ticker = getYahooTicker(h);
+    console.log(`Using ticker: ${h.name} → ${ticker} (exchange: ${h.exchange})`);
     sb.textContent = 'Fetching ' + (i+1) + '/' + holdings.length + ': ' + h.name + '...';
     if (!ticker) { skip++; continue; }
 
