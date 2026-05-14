@@ -1377,17 +1377,20 @@ function getYahooTicker(h) {
     return figiToYahooTicker(f.ticker, f.exchCode);
   }
 
-  // Look up any unknown ISINs via OpenFIGI
-  // Clear FIGI cache so it re-runs with correct execPlace from CSV
-  Object.keys(figiCache).forEach(k => delete figiCache[k]);
-  // Debug: log what execPlace values we have
-  holdings.forEach(h => console.log(`Holdings: ${h.name} exchange=${h.exchange} execPlace=${h.execPlace} currency=${h.currency}`));
-  sb.textContent = 'Looking up tickers via OpenFIGI...';
-  await lookupFIGI(holdings);
-
   // Find earliest transaction for historical fetch range
   const earliest = allTx.filter(t=>t.date).sort((a,b)=>a.date-b.date)[0];
   const fromTs = earliest ? Math.floor(earliest.date.getTime()/1000) : Math.floor(Date.now()/1000) - 365*24*3600;
+
+  // Fetch historical FX rates FIRST for accurate SEK conversion in timeline
+  sb.textContent = 'Fetching historical FX rates...';
+  await fetchHistoricalFX(fromTs);
+
+  // Clear FIGI cache so it re-runs with correct execPlace from CSV
+  Object.keys(figiCache).forEach(k => delete figiCache[k]);
+  // Debug: log holdings data
+  holdings.forEach(h => console.log(`Holdings: ${h.name} exchange=${h.exchange} execPlace=${h.execPlace} currency=${h.currency}`));
+  sb.textContent = 'Looking up tickers via OpenFIGI...';
+  await lookupFIGI(holdings);
 
   // Fetch S&P 500 for benchmark
   sb.textContent = 'Fetching S&P 500 benchmark...';
@@ -1422,7 +1425,7 @@ function getYahooTicker(h) {
       if (hist && hist.length) {
         historicalPrices[h.isin+'|'+h.exchange] = hist.map(p => ({
           date: p.date,
-          priceSEK: toSEK(p.close, p.currency || cur)
+          priceSEK: toSEK(p.close, p.currency || cur, p.date.toISOString().slice(0,10))
         }));
       }
     } else { fail++; }
