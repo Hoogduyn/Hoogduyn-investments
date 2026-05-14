@@ -395,8 +395,7 @@ const figiCache = {}; // isin → { ticker, exchCode, currency }
 
 async function lookupFIGI(holdingsList) {
   // Run for all holdings — use DEGIRO exchange to pick correct listing
-  // Skip US stocks — first-word ticker fallback is more reliable than FIGI for these
-  const toLookup = holdingsList.filter(h => !figiCache[h.isin] && !h.isin.startsWith('US'));
+  const toLookup = holdingsList.filter(h => !figiCache[h.isin]);
   if (!toLookup.length) return;
 
   const batches = [];
@@ -463,8 +462,11 @@ async function lookupFIGI(holdingsList) {
           if (!preferred) preferred = result.data.find(d =>
             ['UN','UW','US','EB','GF','AS','LN','SM','SW','SS','NA'].includes(d.exchCode)
           ) || result.data[0];
+          // Validate ticker — real tickers are short alphanumeric, not company names
+          const tick = preferred.ticker || '';
+          const isValidTicker = tick.length <= 5 && /^[A-Z0-9.\/\-]+$/.test(tick) && !tick.includes(' ');
           figiCache[h.isin] = {
-            ticker: preferred.ticker,
+            ticker: isValidTicker ? tick : null,
             exchCode: preferred.exchCode,
             currency: preferred.currency,
             name: preferred.name
@@ -1450,10 +1452,17 @@ function getYahooTicker(h) {
       return null;
     }
 
-    // Sanity check — if ticker looks wrong (too long or has spaces), use fallback
-    const rawTicker = f.ticker.replace(/\//g, '-').replace(/\..*$/, '');
-    if (rawTicker.length > 5 || rawTicker.includes(' ') || rawTicker === rawTicker.toUpperCase() && rawTicker.length > 4 && !['GOOGL','MRVL','BRK-B','ASWC','WCBR','VEVE','VVSM'].includes(rawTicker)) {
-      if (h.isin.startsWith('US')) return h.name.split(' ')[0].toUpperCase().replace(/[^A-Z]/g,'');
+    // If FIGI returned invalid ticker, use fallback
+    if (!f.ticker) {
+      if (h.isin.startsWith('US')) {
+        // For US stocks use known ticker patterns
+        const knownTickers = {
+          'US81762P1021': 'NOW', 'US79466L3024': 'CRM', 'US67066G1040': 'NVDA',
+          'US5738741041': 'MRVL', 'US0846707026': 'BRK-B', 'US60937P1066': 'MDB',
+          'US0079031078': 'AMD', 'US02079K3059': 'GOOGL', 'US30303M1027': 'META',
+        };
+        return knownTickers[h.isin] || h.name.split(' ')[0].toUpperCase().replace(/[^A-Z]/g,'');
+      }
       return null;
     }
 
