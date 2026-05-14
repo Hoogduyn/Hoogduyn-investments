@@ -364,7 +364,7 @@ function toSEK(price,currency){
   return price*(fx[currency]||1);
 }
 
-const ISIN_TO_YAHOO = {}; // OpenFIGI handles all lookups
+const ISIN_TO_YAHOO = {}; // OpenFIGI handles all lookups automatically
 
 // ── YAHOO FINANCE via Cloudflare Worker proxy ────────────────────────────────
 const PROXY = 'https://test.rhoogduijn.workers.dev';
@@ -438,7 +438,7 @@ function figiToYahooTicker(ticker, exchCode) {
     .replace(/\//g, '-'); // BRK/B → BRK-B
 
   const suffixMap = {
-    'GF': '.DE',   // Frankfurt XETRA → Yahoo uses .DE
+    'GF': '.F',    // Frankfurt generic → Yahoo uses .F
     'EB': '.DE',   // Frankfurt
     'AS': '.AS',   // Amsterdam Euronext
     'NA': '.AS',   // Amsterdam
@@ -494,13 +494,16 @@ async function fetchYahooPrice(symbol) {
 
     const high52w = meta?.fiftyTwoWeekHigh;
     const low52w = meta?.fiftyTwoWeekLow;
-    return (price && price > 0) ? {
-      price, currency, prevClose,
-      marketChange: regularMarketChange,
-      marketChangePct: regularMarketChangePercent,
-      marketState, tradedToday,
-      high52w, low52w,
-    } : null;
+    if(price && price > 0) {
+      console.log(`Yahoo raw [${symbol}]: price=${price} change=${regularMarketChange} changePct=${regularMarketChangePercent} prevClose=${meta?.previousClose} tradedToday=${tradedToday}`);
+    }
+    if (price && price > 0) {
+      return { price, currency, prevClose,
+        marketChange: regularMarketChange,
+        marketChangePct: regularMarketChangePercent,
+        marketState, tradedToday, high52w, low52w };
+    }
+    return null;
   } catch(e) { return null; }
 }
 
@@ -634,27 +637,27 @@ function buildHoldings(transactions,fromDate){
   const map={};
   for(const tx of transactions){
     if(fromDate&&tx.date&&tx.date<fromDate)continue;
-    if(!map[tx.isin])map[tx.isin]={
+    // Key by ISIN + exchange so same stock on different markets is tracked separately
+    const key = tx.isin + '|' + (tx.exchange||'');
+    if(!map[key])map[key]={
       name:tx.name, isin:tx.isin, shares:0,
       totalBuyShares:0, totalBuyCost:0, totalBuyCostLocal:0,
       costSEK:0, sector:guessSector(tx.name, tx.isin), currency:tx.currency,
       exchange:tx.exchange||''
     };
-    const h=map[tx.isin];
+    const h=map[key];
     h.shares+=tx.shares;
     if(tx.shares > 0){
-      // Buy: track total shares bought, cost in SEK and in local currency
       h.totalBuyShares += tx.shares;
       h.totalBuyCost += Math.abs(tx.totalSEK);
-      // Track local currency cost for accurate BEP
       if(tx.priceLocal && tx.priceLocal > 0) {
         h.totalBuyCostLocal += tx.priceLocal * tx.shares;
       }
     }
-    // Cost basis = average buy price * remaining shares
     const avgBuyPrice = h.totalBuyShares > 0 ? h.totalBuyCost / h.totalBuyShares : 0;
     h.costSEK = avgBuyPrice * Math.max(h.shares, 0);
   }
+  // Filter out fully sold positions, merge display for same ISIN if shares > 0
   return Object.values(map).filter(h=>h.shares>0.001);
 }
 
@@ -737,7 +740,7 @@ function buildRealTimeline(fromDate){
   if(points.length > 0){
     let todayValue = 0;
     for(const h of holdings){
-      const lp = livePrices[h.isin];
+      const lp = livePrices[h.isin+'|'+h.exchange];
       if(lp) todayValue += h.shares * lp.priceSEK;
       else todayValue += Math.max(h.costSEK, 0);
     }
@@ -1038,7 +1041,7 @@ function render(){
   const invested=holdings.reduce((s,h)=>s+Math.max(h.costSEK,0),0);
   let current=0,liveCount=0;
   for(const h of holdings){
-    const lp=livePrices[h.isin];
+    const lp=livePrices[h.isin+'|'+h.exchange];
     if(lp){current+=lp.priceSEK*h.shares;liveCount++;}
     else current+=Math.max(h.costSEK,0);
   }
@@ -1054,7 +1057,7 @@ function render(){
   // Daily change — sum of (current price - prev close) * shares for all live holdings
   let dailyChange = 0, hasDailyData = false, dailyCount = 0;
   for(const h of holdings) {
-    const lp = livePrices[h.isin];
+    const lp = livePrices[h.isin+'|'+h.exchange];
     if(lp && lp.tradedToday) {
       // Use Yahoo's own marketChange (dividend-adjusted) converted to SEK
       if(lp.marketChange != null) {
@@ -1118,7 +1121,7 @@ function renderPortfolioScore(holdings) {
   // Sort by value descending
   const sorted = [...holdings]
     .map(h => {
-      const lp = livePrices[h.isin];
+      const lp = livePrices[h.isin+'|'+h.exchange];
       const val = lp ? lp.priceSEK * h.shares : Math.max(h.costSEK, 0);
       return { ...h, currentVal: val };
     })
@@ -1128,7 +1131,7 @@ function renderPortfolioScore(holdings) {
 
   container.innerHTML = sorted.map(h => {
     const pct = grandTotal > 0 ? (h.currentVal / grandTotal * 100) : 0;
-    const lp = livePrices[h.isin];
+    const lp = livePrices[h.isin+'|'+h.exchange];
     const gain = lp ? h.currentVal - h.costSEK : null;
     const gainStr = gain !== null
       ? `<span style="color:${gain>=0?'var(--gain)':'var(--loss)'};">${gain>=0?'+':''}${fmt(gain)}</span>`
@@ -1207,7 +1210,7 @@ function renderHoldings(hs){
     return diff * sortDir;
   });
   document.getElementById('holdings-tbody').innerHTML=sorted.map(h=>{
-    const lp=livePrices[h.isin];
+    const lp=livePrices[h.isin+'|'+h.exchange];
     const avg=h.shares>0?h.costSEK/h.shares:0;
     // Avg buy in local currency for display
     const avgLocal = h.totalBuyShares > 0 && h.totalBuyCostLocal > 0
@@ -1297,6 +1300,9 @@ async function refreshPrices(){
   // Swedish stocks: SAAB-B.ST, VOLV-B.ST
   // For unmapped ISINs, try guessing Yahoo ticker from name
 function getYahooTicker(h) {
+    // Manual overrides take highest priority
+    if (ISIN_TO_YAHOO[h.isin]) return ISIN_TO_YAHOO[h.isin];
+
     const f = figiCache[h.isin];
     if (!f) {
       // Fallback for US stocks
@@ -1313,7 +1319,7 @@ function getYahooTicker(h) {
     const degiroSuffix = {
       'XET': '.DE', 'NSY': '',   'NDQ': '',   'OMX': '.ST',
       'AMS': '.AS', 'MIL': '.MI','LSE': '.L', 'EPA': '.PA',
-      'EBR': '.BR', 'DEG': '.DE','EAM': '.AS',
+      'EBR': '.BR', 'DEG': '.F', 'EAM': '.AS', 'TDG': '.DE',
     };
 
     if (h.exchange && degiroSuffix[h.exchange] !== undefined) {
@@ -1348,7 +1354,7 @@ function getYahooTicker(h) {
     const result = await fetchYahooPrice(ticker);
     if (result && result.price > 0) {
       const cur = result.currency || h.currency;
-      livePrices[h.isin] = {
+      livePrices[h.isin+'|'+h.exchange] = {
         price: result.price, currency: cur, priceSEK: toSEK(result.price, cur),
         prevClose: result.prevClose,
         prevCloseSEK: result.prevClose ? toSEK(result.prevClose, cur) : null,
@@ -1363,7 +1369,7 @@ function getYahooTicker(h) {
       await new Promise(r => setTimeout(r, 200));
       const hist = await fetchYahooHistory(ticker, fromTs);
       if (hist && hist.length) {
-        historicalPrices[h.isin] = hist.map(p => ({
+        historicalPrices[h.isin+'|'+h.exchange] = hist.map(p => ({
           date: p.date,
           priceSEK: toSEK(p.close, p.currency || cur)
         }));
