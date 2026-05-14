@@ -744,17 +744,8 @@ function buildRealTimeline(fromDate){
   // sum over all holdings of (shares held on that date * closing price on that date)
   const points = [];
 
-  // Pre-calculate cash flows per date (buys = positive, sells = negative)
-  const cashFlows = {};
-  for(const tx of allTx){
-    if(!tx.date) continue;
-    const d = tx.date.toISOString().slice(0,10);
-    cashFlows[d] = (cashFlows[d] || 0) + (tx.shares > 0 ? Math.abs(tx.totalSEK) : -Math.abs(tx.totalSEK));
-  }
-
-  let twrFactor = 1.0; // Cumulative TWR factor
-  let prevValue = 0;
-
+  // Calculate value for each date
+  const dateValues = {};
   for(const dateStr of sortedDates){
     const date = new Date(dateStr);
     if(fromDate && date < fromDate) continue;
@@ -781,18 +772,38 @@ function buildRealTimeline(fromDate){
       const priceEntry = hist.filter(p => p.date <= date).slice(-1)[0];
       if(priceEntry) totalValue += sharesOnDate * priceEntry.priceSEK;
     }
+    dateValues[dateStr] = totalValue;
+  }
 
-    // TWR: neutralize cash flows when calculating daily return
-    // On days with cash flows, denominator = prev value + cash flow added that day
-    const cf = cashFlows[dateStr] || 0;
-    const denominator = prevValue + (cf > 0 ? cf : 0); // only add inflows to denominator
-    if(denominator > 0 && prevValue > 0) {
-      const dailyReturn = totalValue / denominator;
-      twrFactor *= dailyReturn;
+  // Calculate TWR using sub-period returns
+  // A new sub-period starts whenever there's a cash flow (transaction)
+  const txDates = new Set(allTx.filter(t=>t.date).map(t=>t.date.toISOString().slice(0,10)));
+  let twrFactor = 1.0;
+  let subPeriodStart = null;
+  let subPeriodStartValue = 0;
+  const sortedDateKeys = Object.keys(dateValues).sort();
+
+  for(let i = 0; i < sortedDateKeys.length; i++){
+    const dateStr = sortedDateKeys[i];
+    const value = dateValues[dateStr];
+
+    if(subPeriodStart === null){
+      // First point — start sub-period
+      subPeriodStart = dateStr;
+      subPeriodStartValue = value;
+    } else if(txDates.has(dateStr) && i > 0){
+      // Cash flow day — close previous sub-period first
+      const prevDateStr = sortedDateKeys[i-1];
+      const prevValue = dateValues[prevDateStr];
+      if(subPeriodStartValue > 0 && prevValue > 0){
+        twrFactor *= (prevValue / subPeriodStartValue);
+      }
+      // Start new sub-period with today's value (after cash flow)
+      subPeriodStart = dateStr;
+      subPeriodStartValue = value;
     }
-    prevValue = totalValue;
 
-    points.push({ dateStr, value: totalValue, twr: (twrFactor - 1) * 100 });
+    points.push({ dateStr, value, twr: subPeriodStartValue > 0 ? (twrFactor * (value / subPeriodStartValue) - 1) * 100 : 0 });
   }
 
   // The last historical point is already today's data (most recent candle)
