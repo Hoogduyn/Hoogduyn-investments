@@ -204,7 +204,7 @@
     </div>
     <div class="chart-card" style="margin-bottom:0" id="score-card">
       <div class="chart-title">Holdings Breakdown</div>
-      <div id="holdings-breakdown" style="display:flex;flex-direction:column;gap:0.5rem;max-height:320px;overflow-y:auto;padding-right:0.5rem;"></div>
+      <div id="holdings-breakdown" style="display:flex;flex-direction:column;gap:0.5rem;max-height:480px;overflow-y:auto;padding-right:0.75rem;"></div>
     </div>
   </div>
 
@@ -231,7 +231,7 @@
         <button class="toggle-btn" id="sp500-btn" onclick="toggleSP500(this)">S&amp;P</button>
       </div>
     </div>
-    <div class="chart-wrap" style="height:200px"><canvas id="timeline-chart"></canvas></div>
+    <div class="chart-wrap" style="height:320px"><canvas id="timeline-chart"></canvas></div>
   </div>
 
   <div class="tab-bar">
@@ -619,6 +619,9 @@ function splitLine(line,sep){
 function parseCSVText(text){
   const lines=text.split('\n').map(l=>l.replace(/\r/g,'').trimEnd()).filter(Boolean);
   if(lines.length<2)return[];
+  // Detect account currency from header
+  const hdr = lines[0];
+  accountCurrency = (hdr.includes('Totaal EUR')||hdr.includes('Waarde EUR')) ? 'EUR' : 'SEK';
   const sep=lines[0].includes('\t')?'\t':',';
   const rows=[];
   for(let i=1;i<lines.length;i++){
@@ -1112,9 +1115,10 @@ function renderTimeline(points){
 
 // ── UTILS ────────────────────────────────────────────────────────────────────
 function fmt(v,short=false){
-  if(short&&Math.abs(v)>=1e6)return(v/1e6).toFixed(1)+'M kr';
-  if(short&&Math.abs(v)>=1e3)return(v/1e3).toFixed(0)+'k kr';
-  return v.toLocaleString('sv-SE',{minimumFractionDigits:0,maximumFractionDigits:0})+' kr';
+  const sfx = accountCurrency==='EUR' ? ' €' : ' kr';
+  if(short&&Math.abs(v)>=1e6)return(v/1e6).toFixed(1)+'M'+sfx;
+  if(short&&Math.abs(v)>=1e3)return(v/1e3).toFixed(0)+'k'+sfx;
+  return v.toLocaleString('sv-SE',{minimumFractionDigits:0,maximumFractionDigits:0})+sfx;
 }
 function getFromDate(p){
   const n=new Date();
@@ -1743,6 +1747,7 @@ async function loadSavedPortfolio() {
       }));
       livePrices = {};
       historicalPrices = {};
+      accountCurrency = 'SEK'; // default for saved portfolios
       document.getElementById('upload-zone').style.display = 'none';
       document.getElementById('dashboard').style.display = 'block';
       document.getElementById('last-updated').textContent = `${allTx.length} transactions loaded`;
