@@ -411,11 +411,16 @@ async function lookupFIGI(holdingsList) {
         'XNYS': 'XNYS',
         'XNAS': 'XNAS',
       };
+      // Map exchange code to MIC as fallback when execPlace is empty
+      const exchangeToMic = {
+        'XET': 'XETR', 'EAM': 'XAMS', 'MIL': 'XMIL',
+        'LSE': 'XLON', 'EPA': 'XPAR', 'OMX': 'XSTO',
+      };
       const body = batch.map(h => {
         const req = { idType: 'ID_ISIN', idValue: h.isin };
-        const mic = execToMic[h.execPlace];
+        // Use execPlace first, fall back to exchange code
+        const mic = execToMic[h.execPlace] || exchangeToMic[h.exchange];
         if (mic) req.micCode = mic;
-        // Add currency to narrow results further
         if (h.currency && h.currency !== 'SEK') req.currency = h.currency;
         return req;
       });
@@ -769,16 +774,8 @@ function buildRealTimeline(fromDate){
     points.push({ dateStr, value: totalValue });
   }
 
-  // Add today as final point using live prices
-  if(points.length > 0){
-    let todayValue = 0;
-    for(const h of holdings){
-      const lp = livePrices[h.isin+'|'+h.exchange];
-      if(lp) todayValue += h.shares * lp.priceSEK;
-      else todayValue += Math.max(h.costSEK, 0);
-    }
-    points.push({ dateStr: new Date().toLocaleDateString('sv-SE'), value: todayValue });
-  }
+  // The last historical point is already today's data (most recent candle)
+  // No need to add a separate live price endpoint — it causes a spike due to FX differences
 
   // If fromDate set, prepend a start anchor
   if(fromDate && points.length > 0){
