@@ -465,14 +465,18 @@ function getYahooTickerFromFIGI(isin) {
   return figiToYahooTicker(f.ticker, f.exchCode);
 }
 
-async function fetchYahooPrice(symbol) {
-  try {
-    // Use v8/finance/chart with 2d range to get regularMarketChange fields
-    const url = `${PROXY}?symbol=${encodeURIComponent(symbol)}&range=2d&interval=1d`;
-    const resp = await fetch(url);
-    if (!resp.ok) return null;
-    const data = await resp.json();
-    const meta = data?.chart?.result?.[0]?.meta;
+async function fetchYahooPrice(symbol, isinFallback) {
+  const symbols = [symbol];
+  // If ticker fails, try ISIN directly — Yahoo supports e.g. IE00BKX55T58.IR
+  if (isinFallback) symbols.push(isinFallback + '.IR');
+
+  for (const sym of symbols) {
+    try {
+      const url = `${PROXY}?symbol=${encodeURIComponent(sym)}&range=2d&interval=1d`;
+      const resp = await fetch(url);
+      if (!resp.ok) continue;
+      const data = await resp.json();
+      const meta = data?.chart?.result?.[0]?.meta;
     if (!meta?.regularMarketPrice) return null;
 
     const price = meta.regularMarketPrice;
@@ -503,11 +507,13 @@ async function fetchYahooPrice(symbol) {
 
     console.log(`Yahoo [${symbol}]: price=${price} change=${regularMarketChange?.toFixed(2)} changePct=${regularMarketChangePercent?.toFixed(2)}% prevClose=${prevClose} tradedToday=${tradedToday}`);
 
-    return { price, currency, prevClose,
-      marketChange: regularMarketChange,
-      marketChangePct: regularMarketChangePercent,
-      marketState, tradedToday, high52w, low52w };
-  } catch(e) { return null; }
+      return { price, currency, prevClose,
+        marketChange: regularMarketChange,
+        marketChangePct: regularMarketChangePercent,
+        marketState, tradedToday, high52w, low52w };
+    } catch(e) { continue; }
+  }
+  return null;
 }
 
 async function fetchYahooHistory(symbol, fromTimestamp) {
@@ -1354,7 +1360,7 @@ function getYahooTicker(h) {
     sb.textContent = 'Fetching ' + (i+1) + '/' + holdings.length + ': ' + h.name + '...';
     if (!ticker) { skip++; continue; }
 
-    const result = await fetchYahooPrice(ticker);
+    const result = await fetchYahooPrice(ticker, h.isin);
     if (result && result.price > 0) {
       const cur = result.currency || h.currency;
       livePrices[h.isin+'|'+h.exchange] = {
