@@ -760,7 +760,7 @@ function buildRealTimeline(fromDate){
       if(sharesOnDate <= 0) continue;
 
       // Find closest historical price on or before this date
-      const hist = historicalPrices[h.isin];
+      const hist = historicalPrices[h.isin+'|'+h.exchange];
       if(!hist) {
         // No price data — use cost basis as fallback
         const costOnDate = allTx
@@ -1071,7 +1071,10 @@ let sortCol='value',sortDir=-1;
 function render(){
   const from=getFromDate(period);
   holdings=buildHoldings(allTx,null); // always show current holdings regardless of period
-  const invested=holdings.reduce((s,h)=>s+Math.max(h.costSEK,0),0);
+  // Net invested = total buys - total sell proceeds (matches DEGIRO's calculation)
+  const totalBuys = allTx.filter(t=>t.shares>0).reduce((s,t)=>s+Math.abs(t.totalSEK),0);
+  const totalSells = allTx.filter(t=>t.shares<0).reduce((s,t)=>s+Math.abs(t.totalSEK),0);
+  const invested = Math.max(totalBuys - totalSells, 0);
   let current=0,liveCount=0;
   for(const h of holdings){
     const lp=livePrices[h.isin+'|'+h.exchange];
