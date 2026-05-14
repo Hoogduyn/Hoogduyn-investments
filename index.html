@@ -467,27 +467,33 @@ function getYahooTickerFromFIGI(isin) {
 
 async function fetchYahooPrice(symbol) {
   try {
-    // Use v7/finance/quote which returns change% and prevClose reliably
-    const url = `${PROXY}?symbol=${encodeURIComponent(symbol)}&endpoint=quote`;
+    // Use v8/finance/chart with 2d range to get regularMarketChange fields
+    const url = `${PROXY}?symbol=${encodeURIComponent(symbol)}&range=2d&interval=1d`;
     const resp = await fetch(url);
     if (!resp.ok) return null;
     const data = await resp.json();
-    const q = data?.quoteResponse?.result?.[0];
-    if (!q || !q.regularMarketPrice) {
-      console.error(`Yahoo quote failed [${symbol}]:`, JSON.stringify(data).slice(0, 200));
-      return null;
-    }
+    const meta = data?.chart?.result?.[0]?.meta;
+    if (!meta?.regularMarketPrice) return null;
 
-    const price = q.regularMarketPrice;
-    const currency = q.currency;
-    const marketState = q.marketState;
-    const regularMarketChange = q.regularMarketChange;
-    const regularMarketChangePercent = q.regularMarketChangePercent;
-    const prevClose = q.regularMarketPreviousClose;
-    const high52w = q.fiftyTwoWeekHigh;
-    const low52w = q.fiftyTwoWeekLow;
+    const price = meta.regularMarketPrice;
+    const currency = meta.currency;
+    const marketState = meta.marketState;
+    const high52w = meta.fiftyTwoWeekHigh;
+    const low52w = meta.fiftyTwoWeekLow;
 
-    const marketTime = q.regularMarketTime;
+    // Get previous close from the actual daily candles — most reliable
+    const quotes = data?.chart?.result?.[0]?.indicators?.quote?.[0];
+    const timestamps = data?.chart?.result?.[0]?.timestamp || [];
+    const closes = quotes?.close || [];
+
+    // Previous close = the close from yesterday's candle
+    const prevClose = closes.length >= 2 ? closes[closes.length - 2] : meta.chartPreviousClose;
+
+    // Daily change calculated from actual prices
+    const regularMarketChange = prevClose ? price - prevClose : null;
+    const regularMarketChangePercent = prevClose ? ((price - prevClose) / prevClose) * 100 : null;
+
+    const marketTime = meta.regularMarketTime;
     const today = new Date();
     const marketDate = marketTime ? new Date(marketTime * 1000) : null;
     const tradedToday = marketDate &&
@@ -495,13 +501,13 @@ async function fetchYahooPrice(symbol) {
       marketDate.getUTCMonth() === today.getUTCMonth() &&
       marketDate.getUTCDate() === today.getUTCDate();
 
-    console.log(`Yahoo quote [${symbol}]: price=${price} change=${regularMarketChange} changePct=${regularMarketChangePercent} prevClose=${prevClose} tradedToday=${tradedToday}`);
+    console.log(`Yahoo [${symbol}]: price=${price} change=${regularMarketChange?.toFixed(2)} changePct=${regularMarketChangePercent?.toFixed(2)}% prevClose=${prevClose} tradedToday=${tradedToday}`);
 
     return { price, currency, prevClose,
       marketChange: regularMarketChange,
       marketChangePct: regularMarketChangePercent,
       marketState, tradedToday, high52w, low52w };
-  } catch(e) { console.error(`Yahoo quote error [${symbol}]:`, e); return null; }
+  } catch(e) { return null; }
 }
 
 async function fetchYahooHistory(symbol, fromTimestamp) {
