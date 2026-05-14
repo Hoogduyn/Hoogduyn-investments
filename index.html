@@ -467,24 +467,24 @@ function getYahooTickerFromFIGI(isin) {
 
 async function fetchYahooPrice(symbol) {
   try {
-    const url = `${PROXY}?symbol=${encodeURIComponent(symbol)}&range=5d&interval=1d`;
+    // Use v7/finance/quote which returns change% and prevClose reliably
+    const url = `${PROXY}?symbol=${encodeURIComponent(symbol)}&endpoint=quote`;
     const resp = await fetch(url);
     if (!resp.ok) return null;
     const data = await resp.json();
-    const meta = data?.chart?.result?.[0]?.meta;
-    const price = meta?.regularMarketPrice;
-    const currency = meta?.currency;
-    const marketState = meta?.marketState;
+    const q = data?.quoteResponse?.result?.[0];
+    if (!q || !q.regularMarketPrice) return null;
 
-    // Use Yahoo's own change values — these are already dividend-adjusted
-    const regularMarketChange = meta?.regularMarketChange;
-    const regularMarketChangePercent = meta?.regularMarketChangePercent;
-    const prevClose = price && regularMarketChange != null
-      ? price - regularMarketChange
-      : (meta?.previousClose || meta?.chartPreviousClose);
+    const price = q.regularMarketPrice;
+    const currency = q.currency;
+    const marketState = q.marketState;
+    const regularMarketChange = q.regularMarketChange;
+    const regularMarketChangePercent = q.regularMarketChangePercent;
+    const prevClose = q.regularMarketPreviousClose;
+    const high52w = q.fiftyTwoWeekHigh;
+    const low52w = q.fiftyTwoWeekLow;
 
-    // Check if market has traded today
-    const marketTime = meta?.regularMarketTime;
+    const marketTime = q.regularMarketTime;
     const today = new Date();
     const marketDate = marketTime ? new Date(marketTime * 1000) : null;
     const tradedToday = marketDate &&
@@ -492,18 +492,12 @@ async function fetchYahooPrice(symbol) {
       marketDate.getUTCMonth() === today.getUTCMonth() &&
       marketDate.getUTCDate() === today.getUTCDate();
 
-    const high52w = meta?.fiftyTwoWeekHigh;
-    const low52w = meta?.fiftyTwoWeekLow;
-    if(price && price > 0) {
-      console.log(`Yahoo raw [${symbol}]: price=${price} change=${regularMarketChange} changePct=${regularMarketChangePercent} prevClose=${meta?.previousClose} tradedToday=${tradedToday}`);
-    }
-    if (price && price > 0) {
-      return { price, currency, prevClose,
-        marketChange: regularMarketChange,
-        marketChangePct: regularMarketChangePercent,
-        marketState, tradedToday, high52w, low52w };
-    }
-    return null;
+    console.log(`Yahoo quote [${symbol}]: price=${price} change=${regularMarketChange} changePct=${regularMarketChangePercent} prevClose=${prevClose} tradedToday=${tradedToday}`);
+
+    return { price, currency, prevClose,
+      marketChange: regularMarketChange,
+      marketChangePct: regularMarketChangePercent,
+      marketState, tradedToday, high52w, low52w };
   } catch(e) { return null; }
 }
 
