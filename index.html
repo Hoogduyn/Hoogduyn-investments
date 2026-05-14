@@ -1731,10 +1731,13 @@ async function savePortfolio() {
     await fetch(`${WORKER}/save`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'X-Token': authToken },
-      body: JSON.stringify({ transactions: allTx.map(tx => ({
-        ...tx,
-        date: tx.date ? tx.date.toISOString() : null
-      }))})
+      body: JSON.stringify({
+        accountCurrency,
+        transactions: allTx.map(tx => ({
+          ...tx,
+          date: tx.date ? tx.date.toISOString() : null
+        }))
+      })
     });
   } catch(e) {}
 }
@@ -1754,7 +1757,7 @@ async function loadSavedPortfolio() {
       }));
       livePrices = {};
       historicalPrices = {};
-      accountCurrency = 'SEK'; // default for saved portfolios
+      accountCurrency = data.accountCurrency || 'SEK';
       document.getElementById('upload-zone').style.display = 'none';
       document.getElementById('dashboard').style.display = 'block';
       document.getElementById('last-updated').textContent = `${allTx.length} transactions loaded`;
