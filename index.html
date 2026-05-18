@@ -385,6 +385,7 @@ const ISIN_TO_YAHOO = {
   'IE00BLPK3577': 'WCBR.MI',   // WisdomTree Cybersecurity — Milan
   'IE000OJ5TQP4': 'ASWC.DE',   // Future of Defence — Frankfurt
   'IE00BMC38736': 'SMH.MI',    // VanEck Semiconductor — Milan
+  'IE00BKX55T58': 'VEVE.AS',   // Vanguard FTSE Developed World — Amsterdam
 };
 
 // ── YAHOO FINANCE via Cloudflare Worker proxy ────────────────────────────────
@@ -441,7 +442,7 @@ async function lookupFIGI(holdingsList) {
         const req = {
           idType: 'ID_ISIN',
           idValue: h.isin,
-          securityType2: h.isin.startsWith('IE') || h.isin.startsWith('LU') ? 'Fund' : 'Common Stock',
+          securityType2: h.isin.startsWith('IE') || h.isin.startsWith('LU') ? 'ETP' : 'Common Stock',
         };
         // Use execPlace first, fall back to exchange code
         const mic = execToMic[h.execPlace] || exchangeToMic[h.exchange];
