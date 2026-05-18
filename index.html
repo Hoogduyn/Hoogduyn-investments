@@ -10,16 +10,17 @@
 <style>
   :root {
     --bg:#0b0e13;--surface:#12161e;--surface2:#1a1f2e;--border:#252b3b;
-    --accent:#00e5a0;--accent2:#5b8aff;--text:#e8ecf4;--muted:#6b7694;
+    --accent:#c9a84c;--accent2:#c9a84c;--text:#e8ecf4;--muted:#6b7694;
     --gain:#00e5a0;--loss:#ff6b6b;
   }
   *{margin:0;padding:0;box-sizing:border-box;}
   body{background:var(--bg);color:var(--text);font-family:'DM Mono',monospace;min-height:100vh;}
-  body::before{content:'';position:fixed;inset:0;background-image:linear-gradient(rgba(0,229,160,0.03) 1px,transparent 1px),linear-gradient(90deg,rgba(0,229,160,0.03) 1px,transparent 1px);background-size:40px 40px;pointer-events:none;z-index:0;}
+  body::before{content:'';position:fixed;inset:0;background-image:linear-gradient(rgba(201,168,76,0.03) 1px,transparent 1px),linear-gradient(90deg,rgba(201,168,76,0.03) 1px,transparent 1px);background-size:40px 40px;pointer-events:none;z-index:0;}
   .everything{position:relative;z-index:1;}
   header{padding:1.5rem 2.5rem;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:1rem;}
-  .logo{font-family:'Syne',sans-serif;font-size:1.4rem;font-weight:800;}
-  .logo span{color:var(--accent);}
+  .logo{font-family:'Cormorant Garamond','Cinzel',Georgia,serif;font-size:1.3rem;font-weight:700;letter-spacing:0.15em;color:#fff;}
+  .logo span{color:#c9a84c;font-weight:400;letter-spacing:0.2em;}
+  .logo small{display:block;font-family:'DM Mono',monospace;font-size:0.5rem;letter-spacing:0.35em;color:var(--muted);font-weight:300;margin-top:2px;}
   .last-updated{font-size:0.7rem;color:var(--muted);}
   #upload-zone{margin:3rem auto;max-width:520px;border:2px dashed var(--border);border-radius:16px;padding:3rem 2rem;text-align:center;cursor:pointer;transition:all 0.2s;position:relative;}
   #upload-zone:hover,#upload-zone.dragover{border-color:var(--accent);background:rgba(0,229,160,0.04);}
@@ -42,8 +43,8 @@
   .btn-ghost:hover{border-color:var(--accent);color:var(--accent);}
   .kpi-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:1rem;margin-bottom:1.5rem;}
   .kpi-card{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:1.25rem 1.5rem;position:relative;overflow:hidden;}
-  .kpi-card::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,var(--accent),transparent);}
-  .kpi-card.blue::before{background:linear-gradient(90deg,var(--accent2),transparent);}
+  .kpi-card::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,var(--gold),transparent);}
+  .kpi-card.blue::before{background:linear-gradient(90deg,var(--gold),transparent);}
   .kpi-card.red::before{background:linear-gradient(90deg,var(--loss),transparent);}
   .kpi-label{font-size:0.65rem;color:var(--muted);text-transform:uppercase;letter-spacing:0.1em;margin-bottom:0.5rem;}
   .kpi-value{font-family:'Syne',sans-serif;font-size:1.5rem;font-weight:700;line-height:1;margin-bottom:0.3rem;}
@@ -51,9 +52,26 @@
   .gain-text{color:var(--gain);}
   .loss-text{color:var(--loss);}
   .charts-grid{display:grid;grid-template-columns:1fr 1fr;gap:1.5rem;margin-bottom:1.5rem;}
-  @media(max-width:900px){.charts-grid{grid-template-columns:1fr;}}
+  @media(max-width:900px){
+    .charts-grid{grid-template-columns:1fr;}
+    #dashboard{padding:1rem;}
+    header{padding:1rem 1.5rem;}
+    .kpi-grid{grid-template-columns:1fr 1fr;}
+    table{font-size:0.7rem;}
+    th,td{padding:0.5rem 0.4rem;}
+    .stock-name{font-size:0.72rem;}
+    .stock-isin{font-size:0.6rem;}
+    #timeline-chart-wrap{height:200px!important;}
+  }
+  @media(max-width:600px){
+    .kpi-grid{grid-template-columns:1fr 1fr;}
+    .kpi-value{font-size:1.4rem;}
+    div[style*="grid-template-columns:1.8fr"]{grid-template-columns:1fr!important;flex-direction:column;}
+    .tab-btn{font-size:0.65rem;padding:0.4rem 0.6rem;}
+    .filter-btn{font-size:0.65rem;padding:0.3rem 0.5rem;}
+  }
 
-  .chart-card{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:1.5rem;margin-bottom:1.5rem;}
+  .chart-card{background:var(--surface);border:1px solid var(--border);border-left:2px solid #c9a84c33;border-radius:12px;padding:1.5rem;margin-bottom:1.5rem;}
   .chart-title{font-family:'Syne',sans-serif;font-size:0.85rem;font-weight:700;margin-bottom:1.25rem;}
   .chart-wrap{position:relative;height:280px;} #timeline-chart-wrap{height:320px!important;}
   .sector-legend{margin-top:1rem;display:flex;flex-direction:column;gap:0.4rem;}
@@ -89,18 +107,21 @@
   .score-bar-track{background:var(--surface2);border-radius:4px;height:6px;overflow:hidden;}
   .score-bar-fill{height:100%;border-radius:4px;transition:width 0.8s ease;}
   #login-screen{position:fixed;inset:0;background:var(--bg);z-index:100;display:flex;align-items:center;justify-content:center;}
-  .login-box{background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:2.5rem;width:100%;max-width:380px;position:relative;}
-  .login-box::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;border-radius:16px 16px 0 0;background:linear-gradient(90deg,var(--accent),var(--accent2));}
-  .login-logo{font-family:'Syne',sans-serif;font-size:1.6rem;font-weight:800;margin-bottom:0.25rem;}
-  .login-logo span{color:var(--accent);}
+  .login-box{background:var(--surface);border:1px solid #c9a84c33;border-radius:16px;padding:2.5rem;width:100%;max-width:380px;position:relative;overflow:hidden;text-align:center;}
+  .login-box::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;border-radius:16px 16px 0 0;background:linear-gradient(90deg,#c9a84c,#e8d5a3,#c9a84c);}
+  .stripe-left{position:absolute;top:10%;bottom:10%;left:0;width:2px;background:linear-gradient(180deg,transparent,#c9a84c66,transparent);}
+  .stripe-right{position:absolute;top:10%;bottom:10%;right:0;width:2px;background:linear-gradient(180deg,transparent,#c9a84c66,transparent);}
+  .login-logo{font-family:'Cormorant Garamond','Cinzel',Georgia,serif;font-size:1.6rem;font-weight:700;letter-spacing:0.15em;margin-bottom:0.25rem;}
+  .login-logo span{color:#c9a84c;font-weight:400;}
+  .login-logo small{display:block;font-family:'DM Mono',monospace;font-size:0.55rem;letter-spacing:0.35em;color:var(--muted);margin-top:4px;}
   .login-sub{font-size:0.72rem;color:var(--muted);margin-bottom:2rem;}
   .login-label{font-size:0.65rem;color:var(--muted);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:0.4rem;display:block;}
-  .login-input{width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:0.65rem 0.9rem;color:var(--text);font-family:'DM Mono',monospace;font-size:0.8rem;margin-bottom:1rem;outline:none;transition:border-color 0.15s;}
-  .login-input:focus{border-color:var(--accent);}
-  .login-btn{width:100%;background:var(--accent);border:none;color:#000;padding:0.7rem;border-radius:8px;font-family:'DM Mono',monospace;font-size:0.8rem;font-weight:600;cursor:pointer;transition:all 0.15s;margin-bottom:0.75rem;}
-  .login-btn:hover{background:#00ffb3;}
+  .login-input{width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:0.65rem 0.9rem;color:var(--text);font-family:'DM Mono',monospace;font-size:0.8rem;margin-bottom:1rem;outline:none;transition:border-color 0.15s;text-align:left;box-sizing:border-box;}
+  .login-input:focus{border-color:var(--gold);}
+  .login-btn{width:100%;background:#c9a84c;border:none;color:#0a0c10;padding:0.7rem;border-radius:8px;font-family:'Raleway',sans-serif;font-size:0.75rem;font-weight:600;cursor:pointer;transition:all 0.15s;margin-bottom:0.75rem;letter-spacing:0.2em;}
+  .login-btn:hover{background:#e8d5a3;}
   .login-switch{font-size:0.7rem;color:var(--muted);text-align:center;cursor:pointer;}
-  .login-switch span{color:var(--accent);text-decoration:underline;}
+  .login-switch span{color:#c9a84c;text-decoration:underline;}
   .login-error{font-size:0.72rem;color:var(--loss);margin-bottom:0.75rem;padding:0.5rem 0.75rem;background:rgba(255,107,107,0.1);border-radius:6px;display:none;}
   .user-badge{font-size:0.68rem;color:var(--muted);display:flex;align-items:center;gap:0.5rem;}
   .logout-btn{background:transparent;border:none;color:var(--muted);font-size:0.68rem;cursor:pointer;text-decoration:underline;font-family:'DM Mono',monospace;}
@@ -113,8 +134,18 @@
 <!-- LOGIN SCREEN -->
 <div id="login-screen">
   <div class="login-box">
-    <div class="login-logo">PORT<span>FOLIO</span></div>
-    <div class="login-sub">Your personal investment tracker</div>
+    <img src="icon.jpeg" style="width:80px;height:80px;border-radius:18px;margin-bottom:1rem;display:block;margin-left:auto;margin-right:auto;" onerror="this.style.display='none'">
+      <div class="stripe-left"></div>
+      <div class="stripe-right"></div>
+      <div style="margin-bottom:1.5rem;">
+        <div style="font-family:'Montserrat',sans-serif;font-size:1.7rem;font-weight:300;letter-spacing:0.35em;color:#fff;margin-bottom:0.3rem;text-align:center;">HOOGDUYN</div>
+        <div style="display:flex;align-items:center;gap:0.5rem;justify-content:center;">
+          <div style="flex:0 0 20px;height:1px;background:#c9a84c;opacity:0.7;"></div>
+          <div style="font-family:'Montserrat',sans-serif;font-size:0.6rem;font-weight:100;letter-spacing:0.4em;color:#c9a84c;">INVESTMENTS</div>
+          <div style="flex:0 0 20px;height:1px;background:#c9a84c;opacity:0.7;"></div>
+        </div>
+        <div style="font-family:'DM Mono',monospace;font-size:0.48rem;letter-spacing:0.4em;color:#444;margin-top:0.5rem;text-align:center;">PORTFOLIO TRACKER</div>
+      </div>
     <div class="login-error" id="login-error"></div>
     <div id="login-form">
       <label class="login-label">Username</label>
@@ -137,7 +168,14 @@
 
 <div class="everything">
 <header>
-  <div class="logo">PORT<span>FOLIO</span></div>
+  <div style="display:flex;align-items:center;gap:0.75rem;"><img src="icon.jpeg" style="width:36px;height:36px;border-radius:8px;" onerror="this.style.display='none'"><div>
+          <div style="font-family:'Raleway','Cormorant Garamond',Georgia,serif;font-size:1rem;font-weight:300;letter-spacing:0.3em;color:#fff;">HOOGDUYN</div>
+          <div style="display:flex;align-items:center;gap:0.4rem;">
+            <div style="width:12px;height:1px;background:#c9a84c;opacity:0.7;"></div>
+            <div style="font-family:'Montserrat',sans-serif;font-size:0.4rem;font-weight:100;letter-spacing:0.3em;color:#c9a84c;">INVESTMENTS</div>
+            <div style="width:12px;height:1px;background:#c9a84c;opacity:0.7;"></div>
+          </div>
+        </div></div>
   <div style="display:flex;align-items:center;gap:1rem;">
       <div class="user-badge">👤 <span id="username-display"></span> <button class="logout-btn" onclick="doLogout()">Sign out</button></div>
       <div class="last-updated" id="last-updated">No data loaded</div>
@@ -946,8 +984,8 @@ function renderGainsChart(invested,current,returnPct){
       labels: ['Invested', gainLabel],
       datasets: [{
         data: [Math.max(invested, 0), Math.abs(gain)],
-        backgroundColor: ['rgba(91,138,255,0.8)', isGain ? 'rgba(0,229,160,0.8)' : 'rgba(255,107,107,0.8)'],
-        borderColor: ['#5b8aff', gainColor],
+        backgroundColor: ['rgba(139,105,20,0.7)', isGain ? 'rgba(201,168,76,0.85)' : 'rgba(255,107,107,0.8)'],
+        borderColor: ['#8b6914', gainColor],
         borderWidth: 3,
         hoverOffset: 8,
       }]
