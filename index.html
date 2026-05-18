@@ -299,7 +299,7 @@ const ISIN_SECTOR = {
   'US79466L3024': 'Technology',    // Salesforce
   'US30303M1027': 'Technology',    // Meta
   'NL0010273215': 'Technology',    // ASML
-  'CNE100000296': 'Technology', // BYD    // BYD
+  'CNE100000296': 'Auto/EV',        // BYD
   'US67066G1040': 'Technology',    // NVIDIA
   'US0167066592': 'Technology',    // NVIDIA
   'IE000OJ5TQP4': 'Defense',       // Future of Defence ETF
@@ -310,7 +310,7 @@ const ISIN_SECTOR = {
   'US0079031078': 'Technology',    // AMD
   'US02079K3059': 'Technology',    // Alphabet
   'US38259P5089': 'Technology',    // Alphabet
-  'IE00BKX55T58': 'Finance',       // Vanguard World ETF
+  'IE00BKX55T58': 'Global',        // Vanguard World ETF
   'IE00BMC38736': 'Technology',    // VanEck Semiconductor ETF
   'US5949181045': 'Technology',    // Microsoft
   'US0378331005': 'Technology',    // Apple
@@ -592,19 +592,18 @@ async function fetchYahooHistory(symbol, fromTimestamp) {
 }
 
 async function loadFXRates() {
-  // Fetch FX rates via our Cloudflare Worker (same as stock prices)
+  // Fetch live FX rates via fetchYahooPrice for accuracy
   const pairs = [
     ['EURSEK=X', 'EUR'], ['USDSEK=X', 'USD'],
     ['GBPSEK=X', 'GBP'], ['DKKSEK=X', 'DKK'], ['NOKSEK=X', 'NOK']
   ];
   for (const [symbol, currency] of pairs) {
     try {
-      const url = `${PROXY}?symbol=${encodeURIComponent(symbol)}&range=1d&interval=1d`;
-      const resp = await fetch(url);
-      if (!resp.ok) continue;
-      const data = await resp.json();
-      const rate = data?.chart?.result?.[0]?.meta?.regularMarketPrice;
-      if (rate && rate > 0) fx[currency] = rate;
+      const result = await fetchYahooPrice(symbol);
+      if (result && result.price > 0) {
+        fx[currency] = result.price;
+        console.log(`FX rate: ${symbol} = ${result.price}`);
+      }
     } catch(e) {}
   }
 }
@@ -1417,9 +1416,8 @@ async function fetchHistoricalFX(fromTimestamp) {
         hist.forEach(p => {
           historicalFX[currency][p.date.toISOString().slice(0,10)] = p.close;
         });
-        // Update current fx rate with latest
-        const latest = hist[hist.length-1];
-        if (latest) fx[currency] = latest.close;
+        // Don't override live fx rates with historical candle data
+        // loadFXRates() handles live rates separately
       }
     } catch(e) {}
     await new Promise(r => setTimeout(r, 200));
