@@ -1371,8 +1371,8 @@ function renderHoldings(hs){
       const prevCloseSEK = toSEK(lp.prevClose, lp.currency);
       const dailyChgSEK = (lp.priceSEK - prevCloseSEK) * h.shares;
       const dailyPct = lp.prevClose > 0 ? ((lp.price - lp.prevClose) / lp.prevClose * 100) : 0;
-      const stateIcon = lp.marketState === 'REGULAR' ? '🟢' : lp.marketState === 'PRE' ? '🟡' : lp.tradedToday ? '🔵' : '🌙';
-      dailyCell = `<span class="${dailyChgSEK>=0?'gain-text':'loss-text'}">${dailyChgSEK>=0?'+':''}${fmt(dailyChgSEK)}<br><small>${dailyPct>=0?'+':''}${dailyPct.toFixed(2)}% ${stateIcon}</small></span>`;
+      const stateIcon = lp.tradedToday ? '' : ' 🌙';
+      dailyCell = `<span class="${dailyChgSEK>=0?'gain-text':'loss-text'}">${dailyChgSEK>=0?'+':''}${fmt(dailyChgSEK)}<br><small>${dailyPct>=0?'+':''}${dailyPct.toFixed(2)}%${stateIcon}</small></span>`;
     }
 
     return`<tr>
