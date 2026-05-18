@@ -1190,13 +1190,10 @@ function render(){
   let dailyChange = 0, hasDailyData = false, dailyCount = 0;
   for(const h of holdings) {
     const lp = livePrices[h.isin+'|'+h.exchange];
-    if(lp && lp.tradedToday) {
-      // Use Yahoo's own marketChange (dividend-adjusted) converted to SEK
-      if(lp.marketChange != null) {
-        dailyChange += toSEK(lp.marketChange, lp.currency) * h.shares;
-      } else if(lp.prevCloseSEK && lp.priceSEK) {
-        dailyChange += (lp.priceSEK - lp.prevCloseSEK) * h.shares;
-      }
+    if(lp && lp.prevClose) {
+      // Include FX effects for closed markets — matches DEGIRO behavior
+      const prevCloseSEK = toSEK(lp.prevClose, lp.currency);
+      dailyChange += (lp.priceSEK - prevCloseSEK) * h.shares;
       hasDailyData = true;
       dailyCount++;
     }
