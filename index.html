@@ -438,7 +438,11 @@ async function lookupFIGI(holdingsList) {
         'LSE': 'XLON', 'EPA': 'XPAR', 'OMX': 'XSTO',
       };
       const body = batch.map(h => {
-        const req = { idType: 'ID_ISIN', idValue: h.isin };
+        const req = {
+          idType: 'ID_ISIN',
+          idValue: h.isin,
+          securityType2: h.isin.startsWith('IE') || h.isin.startsWith('LU') ? 'Fund' : 'Common Stock',
+        };
         // Use execPlace first, fall back to exchange code
         const mic = execToMic[h.execPlace] || exchangeToMic[h.exchange];
         if (mic) req.micCode = mic;
@@ -1445,16 +1449,23 @@ function getYahooTicker(h) {
     // Manual overrides take highest priority
     if (ISIN_TO_YAHOO[h.isin]) return ISIN_TO_YAHOO[h.isin];
 
+    // Known US tickers — checked first since FIGI is unreliable for some US stocks
+    const knownTickers = {
+      'US81762P1021': 'NOW', 'US79466L3024': 'CRM', 'US67066G1040': 'NVDA',
+      'US5738741041': 'MRVL', 'US0846707026': 'BRK-B', 'US60937P1066': 'MDB',
+      'US0079031078': 'AMD', 'US02079K3059': 'GOOGL', 'US30303M1027': 'META',
+    };
+    if (knownTickers[h.isin]) return knownTickers[h.isin];
+
     const f = figiCache[h.isin];
     if (!f) {
-      // Fallback for US stocks
       if (h.isin.startsWith('US')) return h.name.split(' ')[0].toUpperCase().replace(/[^A-Z]/g,'');
       return null;
     }
 
     // If FIGI returned invalid ticker, use fallback
     if (!f.ticker) {
-      if (h.isin.startsWith('US')) return knownTickers[h.isin] || h.name.split(' ')[0].toUpperCase().replace(/[^A-Z]/g,'');
+      if (h.isin.startsWith('US')) return h.name.split(' ')[0].toUpperCase().replace(/[^A-Z]/g,'');
       return null;
     }
 
