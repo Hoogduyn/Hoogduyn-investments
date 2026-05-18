@@ -1367,10 +1367,9 @@ function renderHoldings(hs){
 
     // Daily change for this stock
     let dailyCell = '<span class="no-ticker">—</span>';
-    if(lp && lp.tradedToday) {
-      // Use Yahoo's dividend-adjusted change values
-      const dailyChgLocal = lp.marketChange != null ? lp.marketChange * h.shares : (lp.price - lp.prevClose) * h.shares;
-      const dailyChgSEK = toSEK(dailyChgLocal, lp.currency);
+    if(lp && lp.prevClose) {
+      const prevCloseSEK = toSEK(lp.prevClose, lp.currency);
+      const dailyChgSEK = (lp.priceSEK - prevCloseSEK) * h.shares;
       const dailyPct = lp.prevClose > 0 ? ((lp.price - lp.prevClose) / lp.prevClose * 100) : 0;
       const stateIcon = lp.marketState === 'REGULAR' ? '🟢' : lp.marketState === 'PRE' ? '🟡' : lp.tradedToday ? '🔵' : '🌙';
       dailyCell = `<span class="${dailyChgSEK>=0?'gain-text':'loss-text'}">${dailyChgSEK>=0?'+':''}${fmt(dailyChgSEK)}<br><small>${dailyPct>=0?'+':''}${dailyPct.toFixed(2)}% ${stateIcon}</small></span>`;
