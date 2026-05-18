@@ -1010,17 +1010,12 @@ function renderTimeline(points){
 
   let portfolioValues, yCallback, tooltipCallback;
   if(chartMode === 'return') {
-    // Use Time-Weighted Return (TWR) if available, otherwise fall back to simple return
-    const hasTWR = points.length > 0 && points[0].twr !== undefined;
-    if(hasTWR) {
-      portfolioValues = points.map(p => p.twr ?? 0);
-    } else {
-      const firstValid = points.find(p => p.value > 100);
-      const base = firstValid ? firstValid.value : (portfolioBase > 0 ? portfolioBase : 1);
-      portfolioValues = points.map(p => base > 0 ? ((p.value - base) / base * 100) : 0);
-    }
+    // Simple period return: % change from first point in selected period
+    const firstValid = points.find(p => p.value > 100);
+    const base = firstValid ? firstValid.value : (portfolioBase > 0 ? portfolioBase : 1);
+    portfolioValues = points.map(p => base > 0 ? ((p.value - base) / base * 100) : 0);
     yCallback = v => (v >= 0 ? '+' : '') + v.toFixed(1) + '%';
-    tooltipCallback = c => ' TWR: ' + (c.raw >= 0 ? '+' : '') + c.raw.toFixed(2) + '%';
+    tooltipCallback = c => ' Return: ' + (c.raw >= 0 ? '+' : '') + c.raw.toFixed(2) + '%';
   } else {
     portfolioValues = points.map(p => p.value);
     yCallback = v => fmt(v, true);
