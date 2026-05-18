@@ -1371,14 +1371,9 @@ function renderHoldings(hs){
       // Use Yahoo's dividend-adjusted change values
       const dailyChgLocal = lp.marketChange != null ? lp.marketChange * h.shares : (lp.price - lp.prevClose) * h.shares;
       const dailyChgSEK = toSEK(dailyChgLocal, lp.currency);
-      // Yahoo returns regularMarketChangePercent as decimal e.g. 0.0081 = 0.81%
-      // Multiply by 100 if it looks like a decimal (abs value < 1 for normal daily moves)
-      // Always calculate % ourselves from price and prevClose — Yahoo's changePct field is unreliable
       const dailyPct = lp.prevClose > 0 ? ((lp.price - lp.prevClose) / lp.prevClose * 100) : 0;
-      const stateIcon = lp.marketState === 'REGULAR' ? '🟢' : lp.marketState === 'PRE' ? '🟡' : '🔵';
+      const stateIcon = lp.marketState === 'REGULAR' ? '🟢' : lp.marketState === 'PRE' ? '🟡' : lp.tradedToday ? '🔵' : '🌙';
       dailyCell = `<span class="${dailyChgSEK>=0?'gain-text':'loss-text'}">${dailyChgSEK>=0?'+':''}${fmt(dailyChgSEK)}<br><small>${dailyPct>=0?'+':''}${dailyPct.toFixed(2)}% ${stateIcon}</small></span>`;
-    } else if(lp && !lp.tradedToday) {
-      dailyCell = '<span class="no-ticker" style="font-size:0.65rem">market closed</span>';
     }
 
     return`<tr>
