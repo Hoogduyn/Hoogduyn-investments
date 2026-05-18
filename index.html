@@ -172,7 +172,7 @@
           <div style="font-family:'Raleway','Cormorant Garamond',Georgia,serif;font-size:1rem;font-weight:300;letter-spacing:0.3em;color:#fff;">HOOGDUYN</div>
           <div style="display:flex;align-items:center;gap:0.4rem;">
             <div style="width:12px;height:1px;background:#c9a84c;opacity:0.7;"></div>
-            <div style="font-family:'Montserrat',sans-serif;font-size:0.4rem;font-weight:100;letter-spacing:0.3em;color:#c9a84c;">INVESTMENTS</div>
+            <div style="font-family:'Montserrat',sans-serif;font-size:0.55rem;font-weight:100;letter-spacing:0.3em;color:#c9a84c;">INVESTMENTS</div>
             <div style="width:12px;height:1px;background:#c9a84c;opacity:0.7;"></div>
           </div>
         </div></div>
@@ -964,7 +964,7 @@ function renderGainsChart(invested,current,returnPct){
       const pct = (returnPct !== undefined && isFinite(returnPct)) ? returnPct : (invested > 0 ? ((gain / invested) * 100) : 0);
       ctx.save();
       ctx.font = "700 1rem 'Syne', sans-serif";
-      ctx.fillStyle = gainColor;
+      ctx.fillStyle = '#c9a84c';
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
       ctx.fillText((pct >= 0 ? '+' : '') + pct.toFixed(1) + '%', cx, cy - 9);
@@ -984,8 +984,8 @@ function renderGainsChart(invested,current,returnPct){
       labels: ['Invested', gainLabel],
       datasets: [{
         data: [Math.max(invested, 0), Math.abs(gain)],
-        backgroundColor: ['rgba(139,105,20,0.7)', isGain ? 'rgba(201,168,76,0.85)' : 'rgba(255,107,107,0.8)'],
-        borderColor: ['#8b6914', gainColor],
+        backgroundColor: ['rgba(60,45,10,0.9)', isGain ? 'rgba(201,168,76,0.9)' : 'rgba(255,107,107,0.8)'],
+        borderColor: ['#c9a84c', gainColor],
         borderWidth: 3,
         hoverOffset: 8,
       }]
