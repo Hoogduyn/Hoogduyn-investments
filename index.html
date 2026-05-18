@@ -1010,12 +1010,28 @@ function renderTimeline(points){
 
   let portfolioValues, yCallback, tooltipCallback;
   if(chartMode === 'return') {
-    // Simple period return: % change from first point in selected period
-    const firstValid = points.find(p => p.value > 100);
-    const base = firstValid ? firstValid.value : (portfolioBase > 0 ? portfolioBase : 1);
-    portfolioValues = points.map(p => base > 0 ? ((p.value - base) / base * 100) : 0);
+    // Return vs invested capital on each date
+    // Build cumulative invested amount per date
+    const txByDate = {};
+    for(const tx of allTx) {
+      if(!tx.date) continue;
+      const d = tx.date.toISOString().slice(0,10);
+      txByDate[d] = (txByDate[d]||0) + (tx.shares > 0 ? Math.abs(tx.totalSEK) : -Math.abs(tx.totalSEK));
+    }
+    let cumInvested = 0;
+    const investedByDate = {};
+    for(const d of Object.keys(txByDate).sort()) {
+      cumInvested += txByDate[d];
+      investedByDate[d] = Math.max(cumInvested, 1);
+    }
+    // For each point find the invested amount at that date
+    portfolioValues = points.map(p => {
+      const dates = Object.keys(investedByDate).filter(d => d <= p.dateStr);
+      const inv = dates.length > 0 ? investedByDate[dates[dates.length-1]] : null;
+      return inv && inv > 0 ? ((p.value - inv) / inv * 100) : null;
+    });
     yCallback = v => (v >= 0 ? '+' : '') + v.toFixed(1) + '%';
-    tooltipCallback = c => ' Return: ' + (c.raw >= 0 ? '+' : '') + c.raw.toFixed(2) + '%';
+    tooltipCallback = c => ' Return: ' + (c.raw != null ? (c.raw >= 0 ? '+' : '') + c.raw.toFixed(2) + '%' : '—');
   } else {
     portfolioValues = points.map(p => p.value);
     yCallback = v => fmt(v, true);
