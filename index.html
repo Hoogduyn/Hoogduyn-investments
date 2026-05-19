@@ -110,8 +110,8 @@
   }
 
   .chart-card{background:var(--surface);border:1px solid var(--border);border-left:2px solid #c9a84c33;border-radius:12px;padding:1.5rem;margin-bottom:1.5rem;}
-  .chart-title{font-family:'Syne',sans-serif;font-size:0.85rem;font-weight:700;margin-bottom:1.25rem;}
-  .chart-wrap{position:relative;height:280px;} #timeline-chart-wrap{height:320px!important;}
+  .chart-title{font-family:'Montserrat',sans-serif;font-size:0.7rem;font-weight:300;letter-spacing:0.25em;color:#c9a84c;margin-bottom:1.25rem;text-transform:uppercase;}
+  .chart-wrap{position:relative;height:280px;} #timeline-chart-wrap{height:380px!important;}
   .sector-legend{margin-top:1rem;display:flex;flex-direction:column;gap:0.4rem;}
   .legend-item{display:flex;align-items:center;gap:0.5rem;font-size:0.72rem;}
   .legend-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0;}
@@ -206,14 +206,17 @@
 
 <div class="everything">
 <header>
-  <div style="display:flex;align-items:center;gap:0.75rem;"><img src="icon-h.jpeg" style="width:40px;height:40px;border-radius:8px;" onerror="this.style.display='none'"><div>
-          <div style="font-family:'Montserrat',sans-serif;font-size:1.4rem;font-weight:300;letter-spacing:0.3em;color:#fff;">HOOGDUYN</div>
-          <div style="display:flex;align-items:center;gap:0.4rem;">
-            <div style="width:12px;height:1px;background:#c9a84c;opacity:0.7;"></div>
-            <div style="font-family:'Montserrat',sans-serif;font-size:0.55rem;font-weight:100;letter-spacing:0.3em;color:#c9a84c;">INVESTMENTS</div>
-            <div style="width:12px;height:1px;background:#c9a84c;opacity:0.7;"></div>
-          </div>
-        </div></div>
+  <div style="display:flex;align-items:center;gap:0.75rem;">
+    <img src="icon-h.jpeg" style="width:40px;height:40px;border-radius:8px;" onerror="this.style.display='none'">
+    <div style="text-align:center;">
+      <div style="font-family:'Montserrat',sans-serif;font-size:1.4rem;font-weight:300;letter-spacing:0.3em;color:#fff;line-height:1.2;">HOOGDUYN</div>
+      <div style="display:flex;align-items:center;justify-content:center;gap:0.4rem;margin-top:2px;">
+        <div style="width:16px;height:1px;background:linear-gradient(90deg,transparent,#c9a84c);"></div>
+        <div style="font-family:'Montserrat',sans-serif;font-size:0.5rem;font-weight:100;letter-spacing:0.35em;color:#c9a84c;">INVESTMENTS</div>
+        <div style="width:16px;height:1px;background:linear-gradient(90deg,#c9a84c,transparent);"></div>
+      </div>
+    </div>
+  </div>
   <div style="display:flex;align-items:center;gap:1rem;">
       <div class="user-badge">👤 <span id="username-display"></span> <button class="logout-btn" onclick="doLogout()">Sign out</button></div>
       <div class="last-updated" id="last-updated">No data loaded</div>
@@ -254,11 +257,6 @@
       <div class="kpi-value" id="kpi-gain">—</div>
       <div class="kpi-sub" id="kpi-gain-pct">Refresh for live prices</div>
     </div>
-    <div class="kpi-card blue">
-      <div class="kpi-label">Open Positions</div>
-      <div class="kpi-value" id="kpi-holdings">—</div>
-      <div class="kpi-sub">Stocks you currently hold</div>
-    </div>
     <div class="kpi-card" id="kpi-card-daily">
       <div class="kpi-label">Today's Change</div>
       <div class="kpi-value" id="kpi-daily">—</div>
@@ -271,7 +269,7 @@
   <div style="display:grid;grid-template-columns:1.8fr 1fr;gap:1.5rem;margin-bottom:1.5rem;align-items:start;">
     <!-- Holdings Breakdown — left, shows all holdings -->
     <div class="chart-card" style="margin-bottom:0" id="score-card">
-      <div class="chart-title">Holdings Breakdown</div>
+      <div class="chart-title">Holdings Breakdown <span id="holdings-count" style="font-size:0.7rem;color:#c9a84c;font-weight:400;opacity:0.7;margin-left:0.5rem;"></span></div>
       <div id="holdings-breakdown" style="display:flex;flex-direction:column;gap:0.5rem;padding-right:0.5rem;"></div>
     </div>
     <!-- Donuts — right, stacked -->
@@ -311,7 +309,7 @@
         <button class="toggle-btn" id="sp500-btn" onclick="toggleSP500(this)">S&amp;P</button>
       </div>
     </div>
-    <div class="chart-wrap" id="timeline-chart-wrap"><canvas id="timeline-chart"></canvas></div>
+    <div style="max-width:900px;margin:0 auto;"><div class="chart-wrap" id="timeline-chart-wrap"><canvas id="timeline-chart"></canvas></div></div>
   </div>
 
   <div class="tab-bar">
@@ -1023,9 +1021,8 @@ function renderGainsChart(invested,current,returnPct){
       datasets: [{
         data: [Math.max(invested, 0), Math.abs(gain)],
         backgroundColor: ['rgba(20,50,30,0.9)', isGain ? 'rgba(80,200,120,0.85)' : 'rgba(231,76,60,0.85)'],
-        borderColor: ['#1a3a2a', gainColor],
-        borderWidth: 1,
-        borderWidth: 3,
+        borderColor: ['#141824', '#141824'],
+        borderWidth: 2,
         hoverOffset: 8,
       }]
     },
@@ -1280,7 +1277,7 @@ function render(){
   document.getElementById('kpi-value-sub').textContent=hasLive
     ? `Live for ${liveCount}/${holdings.length} positions`
     : 'Click Refresh for live prices';
-  document.getElementById('kpi-holdings').textContent=holdings.length;
+  const hc=document.getElementById('holdings-count'); if(hc) hc.textContent='· '+holdings.length+' positions';
 
   // Daily change — sum of (current price - prev close) * shares for all live holdings
   let dailyChange = 0, hasDailyData = false, dailyCount = 0;
