@@ -61,20 +61,48 @@
   @media(max-width:900px){
     .charts-grid{grid-template-columns:1fr;}
     #dashboard{padding:1rem;}
-    header{padding:1rem 1.5rem;}
+    header{padding:0.75rem 1rem;}
     .kpi-grid{grid-template-columns:1fr 1fr;}
-    table{font-size:0.7rem;}
-    th,td{padding:0.5rem 0.4rem;}
-    .stock-name{font-size:0.72rem;}
-    .stock-isin{font-size:0.6rem;}
-    #timeline-chart-wrap{height:200px!important;}
+    table{font-size:0.68rem;}
+    th,td{padding:0.4rem 0.3rem;}
+    .stock-name{font-size:0.68rem;}
+    .stock-isin{font-size:0.58rem;}
+    #timeline-chart-wrap{height:180px!important;}
+    .chart-card{padding:1rem;}
+    .chart-wrap{height:180px!important;}
   }
   @media(max-width:600px){
-    .kpi-grid{grid-template-columns:1fr 1fr;}
-    .kpi-value{font-size:1.4rem;}
-    div[style*="grid-template-columns:1.8fr"]{grid-template-columns:1fr!important;flex-direction:column;}
-    .tab-btn{font-size:0.65rem;padding:0.4rem 0.6rem;}
-    .filter-btn{font-size:0.65rem;padding:0.3rem 0.5rem;}
+    /* KPI - 2 columns, compact */
+    .kpi-grid{grid-template-columns:1fr 1fr;gap:0.5rem;}
+    .kpi-card{padding:0.75rem 1rem;}
+    .kpi-value{font-size:1.2rem;}
+    .kpi-label{font-size:0.5rem;}
+    .kpi-sub{font-size:0.55rem;}
+
+    /* Header compact */
+    header{padding:0.5rem 0.75rem;}
+    .logo-img{width:32px!important;height:32px!important;}
+
+    /* Status bar left aligned */
+    #status-bar{text-align:left;font-size:0.65rem;}
+
+    /* Charts - stack and shrink donuts */
+    div[style*="grid-template-columns:1.8fr"]{display:flex!important;flex-direction:column!important;}
+    div[style*="grid-template-columns:1fr 1fr"]{display:flex!important;flex-direction:column!important;}
+    .chart-wrap{height:160px!important;}
+    #timeline-chart-wrap{height:160px!important;}
+
+    /* Holdings table - hide less important columns */
+    th:nth-child(4),td:nth-child(4),
+    th:nth-child(6),td:nth-child(6),
+    th:nth-child(8),td:nth-child(8){display:none;}
+
+    /* Tabs and filters */
+    .tab-btn{font-size:0.6rem;padding:0.35rem 0.5rem;}
+    .filter-btn{font-size:0.6rem;padding:0.25rem 0.4rem;}
+
+    /* Sector badge smaller */
+    .sector-badge{font-size:0.55rem;padding:0.15rem 0.4rem;}
   }
 
   .chart-card{background:var(--surface);border:1px solid var(--border);border-left:2px solid #c9a84c33;border-radius:12px;padding:1.5rem;margin-bottom:1.5rem;}
