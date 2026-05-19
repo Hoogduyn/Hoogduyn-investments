@@ -72,41 +72,44 @@
     .chart-wrap{height:180px!important;}
   }
   @media(max-width:600px){
+    /* Table scroll */
     .tab-content{overflow-x:auto;-webkit-overflow-scrolling:touch;}
-    table{min-width:400px;}
-    header>div:last-child{flex-wrap:wrap;gap:0.4rem;}
-    .btn-primary{font-size:0.6rem;padding:0.3rem 0.7rem;}
-    /* KPI - 2 columns, compact */
-    .kpi-grid{grid-template-columns:1fr 1fr;gap:0.5rem;}
-    .kpi-card{padding:0.75rem 1rem;}
-    .kpi-value{font-size:1.2rem;}
-    .kpi-label{font-size:0.5rem;}
-    .kpi-sub{font-size:0.55rem;}
+    table{min-width:380px;}
 
     /* Header compact */
-    header{padding:0.5rem 0.75rem;}
-    .logo-img{width:32px!important;height:32px!important;}
+    header{padding:0.5rem 0.75rem;flex-wrap:wrap;gap:0.4rem;}
+    header>div:last-child{flex-wrap:wrap;gap:0.4rem;width:100%;}
+    .btn-primary{font-size:0.6rem;padding:0.3rem 0.7rem;}
 
-    /* Status bar left aligned */
-    #status-bar{text-align:left;font-size:0.65rem;}
+    /* Status bar */
+    #status-bar{font-size:0.6rem;}
 
-    /* Charts - stack and shrink donuts */
+    /* KPI - 2x2 grid */
+    .kpi-grid{grid-template-columns:1fr 1fr;gap:0.5rem;}
+    .kpi-card{padding:0.6rem 0.75rem;}
+    .kpi-value{font-size:1.1rem;}
+    .kpi-label{font-size:0.48rem;letter-spacing:0.15em;}
+    .kpi-sub{font-size:0.5rem;}
+
+    /* Stack all grid layouts */
     div[style*="grid-template-columns:1.8fr"]{display:flex!important;flex-direction:column!important;}
-    div[style*="grid-template-columns:1fr 1fr"]{display:flex!important;flex-direction:column!important;}
-    .chart-wrap{height:160px!important;}
+    #desktop-chart-holdings{display:flex!important;flex-direction:column!important;}
+
+    /* Donuts side by side on mobile */
+    #donut-row{display:grid!important;grid-template-columns:1fr 1fr!important;gap:0.5rem!important;}
+
+    /* Shrink charts */
+    .chart-wrap{height:150px!important;}
     #timeline-chart-wrap{height:160px!important;}
 
-    /* Holdings table - hide less important columns */
+    /* Hide table columns on mobile */
     th:nth-child(4),td:nth-child(4),
-    th:nth-child(6),td:nth-child(6),
-    th:nth-child(8),td:nth-child(8){display:none;}
+    th:nth-child(6),td:nth-child(6){display:none;}
 
     /* Tabs and filters */
-    .tab-btn{font-size:0.6rem;padding:0.35rem 0.5rem;}
-    .filter-btn{font-size:0.6rem;padding:0.25rem 0.4rem;}
-
-    /* Sector badge smaller */
-    .sector-badge{font-size:0.55rem;padding:0.15rem 0.4rem;}
+    .tab-btn{font-size:0.58rem;padding:0.3rem 0.45rem;}
+    .filter-btn{font-size:0.58rem;padding:0.22rem 0.35rem;}
+    .sector-badge{font-size:0.52rem;padding:0.1rem 0.35rem;}
   }
 
   .chart-card{background:var(--surface);border:1px solid var(--border);border-left:2px solid #c9a84c33;border-radius:12px;padding:1.5rem;margin-bottom:1.5rem;}
@@ -266,25 +269,26 @@
 
 
 
-  <div style="display:grid;grid-template-columns:1.8fr 1fr;gap:1.5rem;margin-bottom:1.5rem;align-items:start;">
-    <!-- Holdings Breakdown — left, shows all holdings -->
+  <!-- Donuts row — side by side -->
+  <div id="donut-row" style="display:grid;grid-template-columns:1fr 1fr;gap:1.5rem;margin-bottom:1.5rem;">
+    <div class="chart-card" style="margin-bottom:0">
+      <div class="chart-title">Sector Allocation</div>
+      <div class="chart-wrap" style="height:200px"><canvas id="sector-chart"></canvas></div>
+      <div class="sector-legend" id="sector-legend"></div>
+    </div>
+    <div class="chart-card" style="margin-bottom:0">
+      <div class="chart-title">Invested vs. Current Value</div>
+      <div class="chart-wrap" style="height:200px"><canvas id="gains-chart"></canvas></div>
+    </div>
+  </div>
+
+  <!-- Holdings + Portfolio chart side by side on desktop -->
+  <div id="desktop-chart-holdings" style="display:grid;grid-template-columns:1fr 1.6fr;gap:1.5rem;margin-bottom:1.5rem;align-items:start;">
     <div class="chart-card" style="margin-bottom:0" id="score-card">
       <div class="chart-title">Holdings Breakdown <span id="holdings-count" style="font-size:0.7rem;color:#c9a84c;font-weight:400;opacity:0.7;margin-left:0.5rem;"></span></div>
       <div id="holdings-breakdown" style="display:flex;flex-direction:column;gap:0.5rem;padding-right:0.5rem;"></div>
     </div>
-    <!-- Donuts — right, stacked -->
     <div style="display:flex;flex-direction:column;gap:1.5rem;">
-      <div class="chart-card" style="margin-bottom:0">
-        <div class="chart-title">Sector Allocation</div>
-        <div class="chart-wrap" style="height:200px"><canvas id="sector-chart"></canvas></div>
-        <div class="sector-legend" id="sector-legend"></div>
-      </div>
-      <div class="chart-card" style="margin-bottom:0">
-        <div class="chart-title">Invested vs. Current Value</div>
-        <div class="chart-wrap" style="height:200px"><canvas id="gains-chart"></canvas></div>
-      </div>
-    </div>
-  </div>
 
   <!-- Asset Type Breakdown -->
   <div class="chart-card" style="margin-bottom:1.5rem;">
@@ -309,7 +313,9 @@
         <button class="toggle-btn" id="sp500-btn" onclick="toggleSP500(this)">S&amp;P</button>
       </div>
     </div>
-    <div style="max-width:900px;margin:0 auto;"><div class="chart-wrap" id="timeline-chart-wrap"><canvas id="timeline-chart"></canvas></div></div>
+          <div style="max-width:900px;margin:0 auto;"><div class="chart-wrap" id="timeline-chart-wrap"><canvas id="timeline-chart"></canvas></div></div>
+        </div>
+    </div>
   </div>
 
   <div class="tab-bar">
