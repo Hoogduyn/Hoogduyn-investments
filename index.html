@@ -77,9 +77,9 @@
     table{min-width:380px;}
 
     /* Header compact */
-    header{padding:0.5rem 0.75rem;flex-wrap:wrap;gap:0.4rem;}
-    header>div:last-child{flex-wrap:wrap;gap:0.4rem;width:100%;}
-    .btn-primary{font-size:0.6rem;padding:0.3rem 0.7rem;}
+    header{padding:0.5rem 0.75rem;}
+    .btn-primary,.btn-ghost{font-size:0.6rem;padding:0.3rem 0.7rem;}
+    .controls{justify-content:flex-start;flex-wrap:wrap;gap:0.4rem;}
 
     /* Status bar */
     #status-bar{font-size:0.6rem;}
@@ -93,10 +93,13 @@
 
     /* Stack all grid layouts */
     div[style*="grid-template-columns:1.8fr"]{display:flex!important;flex-direction:column!important;}
-    #desktop-chart-holdings{display:flex!important;flex-direction:column!important;}
+    #row-holdings-chart{grid-template-columns:1fr!important;}
+    #row-donuts-asset{grid-template-columns:1fr 1fr!important;}
 
     /* Donuts side by side on mobile */
     #donut-row{display:grid!important;grid-template-columns:1fr 1fr!important;gap:0.5rem!important;}
+    #donut-row .chart-wrap{height:140px!important;}
+    #donut-row .chart-card{padding:0.75rem;}
 
     /* Shrink charts */
     .chart-wrap{height:150px!important;}
@@ -114,7 +117,7 @@
 
   .chart-card{background:var(--surface);border:1px solid var(--border);border-left:2px solid #c9a84c33;border-radius:12px;padding:1.5rem;margin-bottom:1.5rem;}
   .chart-title{font-family:'Montserrat',sans-serif;font-size:0.7rem;font-weight:300;letter-spacing:0.25em;color:#c9a84c;margin-bottom:1.25rem;text-transform:uppercase;}
-  .chart-wrap{position:relative;height:280px;} #timeline-chart-wrap{height:380px!important;}
+  .chart-wrap{position:relative;height:280px;} #timeline-chart-wrap{height:300px;}
   .sector-legend{margin-top:1rem;display:flex;flex-direction:column;gap:0.4rem;}
   .legend-item{display:flex;align-items:center;gap:0.5rem;font-size:0.72rem;}
   .legend-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0;}
@@ -269,8 +272,35 @@
 
 
 
-  <!-- Donuts row — side by side -->
-  <div id="donut-row" style="display:grid;grid-template-columns:1fr 1fr;gap:1.5rem;margin-bottom:1.5rem;">
+  <!-- ROW 1: Holdings Breakdown + Portfolio Growth (side by side on desktop) -->
+  <div id="row-holdings-chart" style="display:grid;grid-template-columns:1fr 1.8fr;gap:1.5rem;margin-bottom:1.5rem;align-items:start;">
+    <div class="chart-card" style="margin-bottom:0" id="score-card">
+      <div class="chart-title">Holdings Breakdown <span id="holdings-count" style="font-size:0.7rem;color:#c9a84c;font-weight:400;opacity:0.7;margin-left:0.5rem;"></span></div>
+      <div id="holdings-breakdown" style="display:flex;flex-direction:column;gap:0.5rem;padding-right:0.25rem;"></div>
+    </div>
+    <div class="chart-card" style="margin-bottom:0">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1.25rem;flex-wrap:wrap;gap:0.5rem;">
+        <div class="chart-title" style="margin-bottom:0">Portfolio Growth</div>
+        <div style="display:flex;gap:0.3rem;flex-wrap:wrap;align-items:center;">
+          <button class="filter-btn active" data-period="1M">1M</button>
+          <button class="filter-btn" data-period="3M">3M</button>
+          <button class="filter-btn" data-period="6M">6M</button>
+          <button class="filter-btn" data-period="YTD">YTD</button>
+          <button class="filter-btn" data-period="1Y">1Y</button>
+          <button class="filter-btn" data-period="5Y">5Y</button>
+          <button class="filter-btn" data-period="ALL">ALL</button>
+          <div style="width:1px;height:18px;background:var(--border);margin:0 0.25rem;"></div>
+          <button class="toggle-btn active" data-mode="value" onclick="setChartMode('value',this)">SEK</button>
+          <button class="toggle-btn" data-mode="return" onclick="setChartMode('return',this)">%</button>
+          <button class="toggle-btn" id="sp500-btn" onclick="toggleSP500(this)">S&amp;P</button>
+        </div>
+      </div>
+      <div class="chart-wrap" id="timeline-chart-wrap"><canvas id="timeline-chart"></canvas></div>
+    </div>
+  </div>
+
+  <!-- ROW 2: Donuts + Asset Type (side by side on desktop) -->
+  <div id="row-donuts-asset" style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:1.5rem;margin-bottom:1.5rem;">
     <div class="chart-card" style="margin-bottom:0">
       <div class="chart-title">Sector Allocation</div>
       <div class="chart-wrap" style="height:200px"><canvas id="sector-chart"></canvas></div>
@@ -280,41 +310,9 @@
       <div class="chart-title">Invested vs. Current Value</div>
       <div class="chart-wrap" style="height:200px"><canvas id="gains-chart"></canvas></div>
     </div>
-  </div>
-
-  <!-- Holdings + Portfolio chart side by side on desktop -->
-  <div id="desktop-chart-holdings" style="display:grid;grid-template-columns:1fr 1.6fr;gap:1.5rem;margin-bottom:1.5rem;align-items:start;">
-    <div class="chart-card" style="margin-bottom:0" id="score-card">
-      <div class="chart-title">Holdings Breakdown <span id="holdings-count" style="font-size:0.7rem;color:#c9a84c;font-weight:400;opacity:0.7;margin-left:0.5rem;"></span></div>
-      <div id="holdings-breakdown" style="display:flex;flex-direction:column;gap:0.5rem;padding-right:0.5rem;"></div>
-    </div>
-    <div style="display:flex;flex-direction:column;gap:1.5rem;">
-
-  <!-- Asset Type Breakdown -->
-  <div class="chart-card" style="margin-bottom:1.5rem;">
-    <div class="chart-title">Asset Type Breakdown</div>
-    <div id="asset-type-bars" style="display:flex;flex-direction:column;gap:0.75rem;"></div>
-  </div>
-
-  <div class="chart-card">
-    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1.25rem;flex-wrap:wrap;gap:0.75rem;">
-      <div class="chart-title" style="margin-bottom:0">Portfolio Growth</div>
-      <div style="display:flex;gap:0.4rem;flex-wrap:wrap;align-items:center;">
-        <button class="filter-btn active" data-period="1M">1M</button>
-        <button class="filter-btn" data-period="3M">3M</button>
-        <button class="filter-btn" data-period="6M">6M</button>
-        <button class="filter-btn" data-period="YTD">YTD</button>
-        <button class="filter-btn" data-period="1Y">1Y</button>
-        <button class="filter-btn" data-period="5Y">5Y</button>
-        <button class="filter-btn" data-period="ALL">ALL</button>
-        <div style="width:1px;height:18px;background:var(--border);margin:0 0.25rem;"></div>
-        <button class="toggle-btn active" data-mode="value" onclick="setChartMode('value',this)">SEK</button>
-        <button class="toggle-btn" data-mode="return" onclick="setChartMode('return',this)">%</button>
-        <button class="toggle-btn" id="sp500-btn" onclick="toggleSP500(this)">S&amp;P</button>
-      </div>
-    </div>
-          <div style="max-width:900px;margin:0 auto;"><div class="chart-wrap" id="timeline-chart-wrap"><canvas id="timeline-chart"></canvas></div></div>
-        </div>
+    <div class="chart-card" style="margin-bottom:0">
+      <div class="chart-title">Asset Type Breakdown</div>
+      <div id="asset-type-bars" style="display:flex;flex-direction:column;gap:0.75rem;"></div>
     </div>
   </div>
 
