@@ -40,7 +40,7 @@
   .filter-label{font-size:0.7rem;color:var(--muted);text-transform:uppercase;letter-spacing:0.1em;}
   .filter-btn{background:var(--surface);border:1px solid var(--border);color:var(--muted);padding:0.4rem 0.9rem;border-radius:6px;font-family:'DM Mono',monospace;font-size:0.72rem;cursor:pointer;transition:all 0.15s;}
   .filter-btn:hover{border-color:var(--accent);color:var(--text);}
-  .filter-btn.active{background:rgba(0,229,160,0.12);border-color:var(--accent);color:var(--accent);}
+  .filter-btn.active{background:rgba(201,168,76,0.12);border-color:#c9a84c;color:#c9a84c;}
   .spacer{flex:1;}
   .btn-primary{background:#c9a84c;border:none;color:#0a0c10;padding:0.4rem 1.1rem;border-radius:6px;font-family:'DM Mono',monospace;font-size:0.72rem;cursor:pointer;font-weight:600;transition:all 0.15s;}
   .btn-primary:hover{background:#e8d5a3;}
@@ -52,9 +52,9 @@
   .kpi-card::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,#c9a84c,transparent);}
   .kpi-card.blue::before{background:linear-gradient(90deg,#c9a84c,transparent);}
   .kpi-card.red::before{background:linear-gradient(90deg,var(--loss),transparent);}
-  .kpi-label{font-size:0.65rem;color:var(--muted);text-transform:uppercase;letter-spacing:0.1em;margin-bottom:0.5rem;}
+  .kpi-label{font-size:0.6rem;color:#c9a84c;text-transform:uppercase;letter-spacing:0.2em;margin-bottom:0.5rem;opacity:0.85;font-family:'DM Mono',monospace;}
   .kpi-value{font-family:'Syne',sans-serif;font-size:1.5rem;font-weight:700;line-height:1;margin-bottom:0.3rem;}
-  .kpi-sub{font-size:0.68rem;color:var(--muted);}
+  .kpi-sub{font-size:0.65rem;color:#c9a84c;opacity:0.4;font-family:'DM Mono',monospace;}
   .gain-text{color:#50c878;}
   .loss-text{color:#e74c3c;}
   .charts-grid{display:grid;grid-template-columns:1fr 1fr;gap:1.5rem;margin-bottom:1.5rem;}
@@ -72,6 +72,10 @@
     .chart-wrap{height:180px!important;}
   }
   @media(max-width:600px){
+    .tab-content{overflow-x:auto;-webkit-overflow-scrolling:touch;}
+    table{min-width:400px;}
+    header>div:last-child{flex-wrap:wrap;gap:0.4rem;}
+    .btn-primary{font-size:0.6rem;padding:0.3rem 0.7rem;}
     /* KPI - 2 columns, compact */
     .kpi-grid{grid-template-columns:1fr 1fr;gap:0.5rem;}
     .kpi-card{padding:0.75rem 1rem;}
@@ -117,7 +121,7 @@
   .tab-bar{display:flex;gap:0;margin-bottom:1.5rem;border-bottom:1px solid var(--border);}
   .tab-btn{background:transparent;border:none;color:var(--muted);padding:0.6rem 1.2rem;font-family:'DM Mono',monospace;font-size:0.75rem;cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-1px;transition:all 0.15s;}
   .tab-btn:hover{color:var(--text);}
-  .tab-btn.active{color:var(--accent);border-bottom-color:var(--accent);}
+  .tab-btn.active{color:#c9a84c;border-bottom-color:#c9a84c;}
   .tab-content{display:none;}
   .tab-content.active{display:block;}
   table{width:100%;border-collapse:collapse;font-size:0.75rem;}
@@ -1019,7 +1023,8 @@ function renderGainsChart(invested,current,returnPct){
       datasets: [{
         data: [Math.max(invested, 0), Math.abs(gain)],
         backgroundColor: ['rgba(20,50,30,0.9)', isGain ? 'rgba(80,200,120,0.85)' : 'rgba(231,76,60,0.85)'],
-        borderColor: ['#50c878', gainColor],
+        borderColor: ['#1a3a2a', gainColor],
+        borderWidth: 1,
         borderWidth: 3,
         hoverOffset: 8,
       }]
