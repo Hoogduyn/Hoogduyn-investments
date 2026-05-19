@@ -23,7 +23,7 @@
   body{background:var(--bg);color:var(--text);font-family:'DM Mono',monospace;min-height:100vh;}
   body::before{content:'';position:fixed;inset:0;background-image:linear-gradient(rgba(201,168,76,0.03) 1px,transparent 1px),linear-gradient(90deg,rgba(201,168,76,0.03) 1px,transparent 1px);background-size:40px 40px;pointer-events:none;z-index:0;}
   .everything{position:relative;z-index:1;}
-  header{padding:1.5rem 2.5rem;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:1rem;}
+  header{padding:1.5rem 2.5rem;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:1rem;background:#000;}
   .logo{font-family:'Cormorant Garamond','Cinzel',Georgia,serif;font-size:1.3rem;font-weight:700;letter-spacing:0.15em;color:#fff;}
   .logo span{color:#c9a84c;font-weight:400;letter-spacing:0.2em;}
   .logo small{display:block;font-family:'DM Mono',monospace;font-size:0.5rem;letter-spacing:0.35em;color:var(--muted);font-weight:300;margin-top:2px;}
@@ -73,8 +73,9 @@
   }
   @media(max-width:600px){
     /* Table scroll */
-    .tab-content{overflow-x:auto;-webkit-overflow-scrolling:touch;}
-    table{min-width:380px;}
+    .tab-content{overflow-x:hidden;}
+    #tab-current{overflow-x:auto;-webkit-overflow-scrolling:touch;}
+    table{width:100%;min-width:0;}
 
     /* Header compact */
     header{padding:0.5rem 0.75rem;}
@@ -285,7 +286,7 @@
   <div id="row-holdings-chart" style="display:grid;grid-template-columns:1fr 1.4fr;gap:1.5rem;margin-bottom:1.5rem;align-items:start;">
 
     <!-- LEFT: Holdings table -->
-    <div class="chart-card" style="margin-bottom:0;overflow-x:auto;">
+    <div class="chart-card" style="margin-bottom:0;overflow-x:hidden;max-width:100%;">
       <div class="tab-bar" style="margin:-1.5rem -1.5rem 1rem;border-radius:12px 12px 0 0;overflow:hidden;">
         <button class="tab-btn active" data-tab="current">Current Holdings</button>
         <button class="tab-btn" data-tab="history">Transaction History</button>
@@ -1323,13 +1324,13 @@ function render(){
     dailyEl.textContent = (dailyChange >= 0 ? '+' : '') + fmt(dailyChange);
     dailyEl.className = 'kpi-value ' + (dailyChange >= 0 ? 'gain-text' : 'loss-text');
     dailyPctEl.textContent = (dailyPct >= 0 ? '+' : '') + dailyPct.toFixed(2) + '% · ' + dailyCount + ' stocks';
-    dailyCard.className = 'kpi-card' + (dailyChange < 0 ? ' red' : '');
+    dailyCard.className = 'kpi-card' + (dailyChange < 0 ? ' red' : ' blue');
     dailyCard.querySelector('::before') // trigger repaint
   } else {
     dailyEl.textContent = '—';
     dailyEl.className = 'kpi-value';
     dailyPctEl.textContent = 'Refresh for live data';
-    dailyCard.className = 'kpi-card blue';
+    dailyCard.className = 'kpi-card blue'; // gold stripe via CSS
   }
 
   const gainEl=document.getElementById('kpi-gain');
