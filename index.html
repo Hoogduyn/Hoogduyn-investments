@@ -224,10 +224,15 @@
   <div style="display:flex;align-items:center;">
     <img src="icon.jpeg" style="height:80px;width:auto;" onerror="this.style.display='none'">
   </div>
-  <div style="display:flex;align-items:center;gap:1rem;">
-      <div class="user-badge">👤 <span id="username-display"></span> <button class="logout-btn" onclick="doLogout()">Sign out</button></div>
-      <div class="last-updated" id="last-updated">No data loaded</div>
-    </div>
+  <div style="display:flex;align-items:center;gap:0.75rem;flex-wrap:wrap;">
+    <button class="btn-ghost" id="upload-new-btn">↑ New File</button>
+    <input type="file" accept=".csv,.xlsx,.xls" id="file-input-2" style="display:none">
+    <button class="btn-primary" id="refresh-btn">⟳ Refresh</button>
+    <button class="btn-ghost" id="auto-btn" onclick="toggleAuto(this)" style="font-size:0.65rem;">⏱ Auto: ON</button>
+    <div style="width:1px;height:20px;background:#333;"></div>
+    <div class="user-badge">👤 <span id="username-display"></span> <button class="logout-btn" onclick="doLogout()">Sign out</button></div>
+    <div class="last-updated" id="last-updated" style="font-size:0.65rem;"></div>
+  </div>
 </header>
 
 <div id="upload-zone">
@@ -238,13 +243,7 @@
 </div>
 
 <div id="dashboard">
-  <div class="controls">
-    <div class="spacer"></div>
-    <button class="btn-ghost" id="upload-new-btn">↑ New File</button>
-    <input type="file" accept=".csv,.xlsx,.xls" id="file-input-2" style="display:none">
-    <button class="btn-primary" id="refresh-btn">⟳ Refresh Live Prices</button>
-    <button class="btn-ghost" id="auto-btn" onclick="toggleAuto(this)" style="font-size:0.65rem;">⏱ Auto: ON</button>
-  </div>
+
 
   <div id="status-bar" class="status-bar"></div>
 
