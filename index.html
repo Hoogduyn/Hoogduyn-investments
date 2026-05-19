@@ -23,7 +23,7 @@
   body{background:var(--bg);color:var(--text);font-family:'DM Mono',monospace;min-height:100vh;}
   body::before{content:'';position:fixed;inset:0;background-image:linear-gradient(rgba(201,168,76,0.03) 1px,transparent 1px),linear-gradient(90deg,rgba(201,168,76,0.03) 1px,transparent 1px);background-size:40px 40px;pointer-events:none;z-index:0;}
   .everything{position:relative;z-index:1;}
-  header{padding:1.5rem 2.5rem;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:1rem;background:#000;}
+  header{padding:0.5rem 2rem;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;gap:1rem;background:#000;}
   .logo{font-family:'Cormorant Garamond','Cinzel',Georgia,serif;font-size:1.3rem;font-weight:700;letter-spacing:0.15em;color:#fff;}
   .logo span{color:#c9a84c;font-weight:400;letter-spacing:0.2em;}
   .logo small{display:block;font-family:'DM Mono',monospace;font-size:0.5rem;letter-spacing:0.35em;color:var(--muted);font-weight:300;margin-top:2px;}
@@ -78,10 +78,10 @@
     table{width:100%;min-width:0;}
 
     /* Header compact */
-    header{padding:0.5rem 0.75rem;}
+    header{padding:0.4rem 0.75rem;flex-wrap:nowrap;}
     .btn-primary,.btn-ghost{font-size:0.6rem;padding:0.3rem 0.7rem;}
     .controls{justify-content:flex-start;flex-wrap:wrap;gap:0.4rem;}
-    header img{height:60px!important;width:auto!important;border-radius:0!important;}
+    header img{height:50px!important;width:auto!important;}
     header .logo-text-main{font-size:1.6rem!important;}
     header .logo-text-sub{font-size:0.6rem!important;}
 
@@ -222,7 +222,7 @@
 <div class="everything">
 <header>
   <div style="display:flex;align-items:center;">
-    <img src="icon.jpeg" style="height:130px;width:auto;" onerror="this.style.display='none'">
+    <img src="icon.jpeg" style="height:80px;width:auto;" onerror="this.style.display='none'">
   </div>
   <div style="display:flex;align-items:center;gap:1rem;">
       <div class="user-badge">👤 <span id="username-display"></span> <button class="logout-btn" onclick="doLogout()">Sign out</button></div>
