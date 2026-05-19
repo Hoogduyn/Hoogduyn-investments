@@ -347,15 +347,13 @@
           <!-- Sector donut -->
           <div class="chart-card" style="margin-bottom:0;padding:1rem;">
             <div class="chart-title">Sector Allocation</div>
-            <div style="display:flex;align-items:center;gap:0.75rem;">
-              <div style="width:110px;height:110px;flex-shrink:0;position:relative;"><canvas id="sector-chart"></canvas></div>
-              <div class="sector-legend" id="sector-legend" style="flex:1;min-width:0;"></div>
-            </div>
+            <div style="width:110px;height:110px;margin:0 auto;"><canvas id="sector-chart"></canvas></div>
+            <div class="sector-legend" id="sector-legend" style="margin-top:0.75rem;"></div>
           </div>
-          <!-- Gains donut — same height as sector -->
+          <!-- Gains donut —  same height as sector -->
           <div class="chart-card" style="margin-bottom:0;padding:1rem;">
             <div class="chart-title">Invested vs. Return</div>
-            <div class="chart-wrap" style="height:110px;"><canvas id="gains-chart"></canvas></div>
+            <div style="width:110px;height:110px;margin:0 auto;position:relative;"><canvas id="gains-chart"></canvas></div>
           </div>
           <!-- Asset Type below -->
           <div class="chart-card" style="margin-bottom:0;padding:1rem;">
@@ -1038,7 +1036,8 @@ function renderGainsChart(invested,current,returnPct){
   try { Chart.unregister({id:'gainsCenter'}); } catch(e) {}
   Chart.register(centerTextPlugin);
 
-  charts.gains = new Chart(document.getElementById('gains-chart').getContext('2d'), {
+  const gc = document.getElementById('gains-chart');
+  charts.gains = new Chart(gc.getContext('2d'), {
     type: 'doughnut',
     data: {
       labels: ['Invested', gainLabel],
@@ -1046,7 +1045,7 @@ function renderGainsChart(invested,current,returnPct){
         data: [Math.max(invested, 0), Math.abs(gain)],
         backgroundColor: ['rgba(20,50,30,0.9)', isGain ? 'rgba(80,200,120,0.85)' : 'rgba(231,76,60,0.85)'],
         borderColor: ['#141824', '#141824'],
-        borderWidth: 2,
+        borderWidth: 1,
         hoverOffset: 8,
       }]
     },
