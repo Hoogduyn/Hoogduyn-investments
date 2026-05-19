@@ -94,7 +94,7 @@
     /* Stack all grid layouts */
     div[style*="grid-template-columns:1.8fr"]{display:flex!important;flex-direction:column!important;}
     #row-holdings-chart{grid-template-columns:1fr!important;}
-    #row-donuts-asset{grid-template-columns:1fr 1fr!important;}
+    #row-donuts{grid-template-columns:1fr 1fr!important;}
 
     /* Donuts side by side on mobile */
     #donut-row{display:grid!important;grid-template-columns:1fr 1fr!important;gap:0.5rem!important;}
@@ -118,8 +118,8 @@
   .chart-card{background:var(--surface);border:1px solid var(--border);border-left:2px solid #c9a84c33;border-radius:12px;padding:1.5rem;margin-bottom:1.5rem;}
   .chart-title{font-family:'Montserrat',sans-serif;font-size:0.7rem;font-weight:300;letter-spacing:0.25em;color:#c9a84c;margin-bottom:1.25rem;text-transform:uppercase;}
   .chart-wrap{position:relative;height:280px;} #timeline-chart-wrap{height:300px;}
-  .sector-legend{margin-top:1rem;display:flex;flex-direction:column;gap:0.4rem;}
-  .legend-item{display:flex;align-items:center;gap:0.5rem;font-size:0.72rem;}
+  .sector-legend{display:flex;flex-direction:column;gap:0.3rem;}
+  .legend-item{display:flex;align-items:center;gap:0.4rem;font-size:0.65rem;}
   .legend-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0;}
   .legend-name{flex:1;color:var(--muted);}
   .legend-pct{color:var(--text);font-weight:500;}
@@ -272,14 +272,42 @@
 
 
 
-  <!-- ROW 1: Holdings Breakdown + Portfolio Growth (side by side on desktop) -->
-  <div id="row-holdings-chart" style="display:grid;grid-template-columns:1fr 1.8fr;gap:1.5rem;margin-bottom:1.5rem;align-items:start;">
-    <div class="chart-card" style="margin-bottom:0" id="score-card">
-      <div class="chart-title">Holdings Breakdown <span id="holdings-count" style="font-size:0.7rem;color:#c9a84c;font-weight:400;opacity:0.7;margin-left:0.5rem;"></span></div>
-      <div id="holdings-breakdown" style="display:flex;flex-direction:column;gap:0.5rem;padding-right:0.25rem;"></div>
+  <!-- ROW 1: Current Holdings + Portfolio Growth side by side -->
+  <div id="row-holdings-chart" style="display:grid;grid-template-columns:1fr 1.6fr;gap:1.5rem;margin-bottom:1.5rem;align-items:start;">
+    <!-- Current Holdings table card -->
+    <div class="chart-card" style="margin-bottom:0;overflow-x:auto;">
+      <div class="tab-bar" style="margin:-1.5rem -1.5rem 1rem;border-radius:12px 12px 0 0;overflow:hidden;">
+        <button class="tab-btn active" data-tab="current">Current Holdings</button>
+        <button class="tab-btn" data-tab="history">Transaction History</button>
+      </div>
+      <div id="tab-current" class="tab-content active">
+        <table>
+          <thead><tr>
+            <th onclick="sortHoldings('name')" style="cursor:pointer">Stock ↕</th>
+            <th onclick="sortHoldings('sector')" style="cursor:pointer">Sector ↕</th>
+            <th onclick="sortHoldings('shares')" style="cursor:pointer">Shares ↕</th>
+            <th onclick="sortHoldings('cost')" style="cursor:pointer">Cost ↕</th>
+            <th>BEP</th>
+            <th>Live Price</th>
+            <th onclick="sortHoldings('value')" style="cursor:pointer">Value ↕</th>
+            <th onclick="sortHoldings('gain')" style="cursor:pointer">Gain / Loss ↕</th>
+            <th>Today</th>
+          </tr></thead>
+          <tbody id="holdings-tbody"></tbody>
+        </table>
+      </div>
+      <div id="tab-history" class="tab-content" style="display:none">
+        <table>
+          <thead><tr>
+            <th>Date</th><th>Stock</th><th>Type</th><th>Shares</th><th>Price</th><th>Currency</th><th>Exchange</th><th>Total</th>
+          </tr></thead>
+          <tbody id="history-tbody"></tbody>
+        </table>
+      </div>
     </div>
+    <!-- Portfolio Growth -->
     <div class="chart-card" style="margin-bottom:0">
-      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1.25rem;flex-wrap:wrap;gap:0.5rem;">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem;flex-wrap:wrap;gap:0.5rem;">
         <div class="chart-title" style="margin-bottom:0">Portfolio Growth</div>
         <div style="display:flex;gap:0.3rem;flex-wrap:wrap;align-items:center;">
           <button class="filter-btn active" data-period="1M">1M</button>
@@ -299,59 +327,30 @@
     </div>
   </div>
 
-  <!-- ROW 2: Donuts + Asset Type (side by side on desktop) -->
-  <div id="row-donuts-asset" style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:1.5rem;margin-bottom:1.5rem;">
-    <div class="chart-card" style="margin-bottom:0">
+  <!-- ROW 2: Sector donut + Gains donut + Holdings Breakdown + Asset Type -->
+  <div id="row-donuts" style="display:grid;grid-template-columns:1fr 1fr 1.5fr 1fr;gap:1.5rem;margin-bottom:1.5rem;align-items:start;">
+    <div class="chart-card" style="margin-bottom:0;padding:1rem;">
       <div class="chart-title">Sector Allocation</div>
-      <div class="chart-wrap" style="height:200px"><canvas id="sector-chart"></canvas></div>
-      <div class="sector-legend" id="sector-legend"></div>
+      <div style="display:flex;align-items:center;gap:0.75rem;">
+        <div style="flex-shrink:0;"><canvas id="sector-chart" width="110" height="110"></canvas></div>
+        <div class="sector-legend" id="sector-legend" style="flex:1;min-width:0;"></div>
+      </div>
     </div>
-    <div class="chart-card" style="margin-bottom:0">
-      <div class="chart-title">Invested vs. Current Value</div>
-      <div class="chart-wrap" style="height:200px"><canvas id="gains-chart"></canvas></div>
+    <div class="chart-card" style="margin-bottom:0;padding:1rem;">
+      <div class="chart-title">Invested vs. Return</div>
+      <div class="chart-wrap" style="height:140px"><canvas id="gains-chart"></canvas></div>
     </div>
-    <div class="chart-card" style="margin-bottom:0">
-      <div class="chart-title">Asset Type Breakdown</div>
-      <div id="asset-type-bars" style="display:flex;flex-direction:column;gap:0.75rem;"></div>
+    <div class="chart-card" style="margin-bottom:0;padding:1rem;" id="score-card">
+      <div class="chart-title">Holdings Breakdown <span id="holdings-count" style="font-size:0.7rem;color:#c9a84c;font-weight:400;opacity:0.7;margin-left:0.5rem;"></span></div>
+      <div id="holdings-breakdown" style="display:flex;flex-direction:column;gap:0.4rem;"></div>
     </div>
-  </div>
-
-  <div class="tab-bar">
-    <button class="tab-btn active" data-tab="current">Current Holdings</button>
-    <button class="tab-btn" data-tab="history">Transaction History</button>
-  </div>
-
-  <div id="tab-current" class="tab-content active">
-    <div class="chart-card" style="overflow-x:auto">
-      <table>
-        <thead><tr>
-          <th onclick="sortHoldings('name')" style="cursor:pointer">Stock ↕</th>
-          <th onclick="sortHoldings('sector')" style="cursor:pointer">Sector ↕</th>
-          <th onclick="sortHoldings('shares')" style="cursor:pointer">Shares ↕</th>
-          <th onclick="sortHoldings('cost')" style="cursor:pointer">Cost (SEK) ↕</th>
-          <th>BEP</th>
-          <th>Live Price</th>
-          <th onclick="sortHoldings('value')" style="cursor:pointer">Value (SEK) ↕</th>
-          <th onclick="sortHoldings('gain')" style="cursor:pointer">Gain / Loss ↕</th>
-          <th>Today</th>
-        </tr></thead>
-        <tbody id="holdings-tbody"></tbody>
-      </table>
+    <div class="chart-card" style="margin-bottom:0;padding:1rem;">
+      <div class="chart-title">Asset Type</div>
+      <div id="asset-type-bars" style="display:flex;flex-direction:column;gap:0.6rem;"></div>
     </div>
   </div>
 
-  <div id="tab-history" class="tab-content">
-    <div class="chart-card" style="overflow-x:auto">
-      <table>
-        <thead><tr>
-          <th>Date</th><th>Stock</th><th>Type</th><th>Shares</th><th>Price</th><th>Currency</th><th>Exchange</th><th>Total (SEK)</th>
-        </tr></thead>
-        <tbody id="history-tbody"></tbody>
-      </table>
-    </div>
-  </div>
-
-  <div class="price-note">⚡ Live prices via Finnhub API. FX rates hardcoded (updated monthly). All data stays in your browser.</div>
+  <div class="price-note">⚡ Live prices via Yahoo Finance. All data stays in your browser.</div>
 </div>
 </div>
 
@@ -971,7 +970,7 @@ function renderSectorChart(holdings){
   charts.sector=new Chart(document.getElementById('sector-chart').getContext('2d'),{
     type:'doughnut',
     data:{labels,datasets:[{data:vals,backgroundColor:colors,borderColor:'#12161e',borderWidth:3,hoverOffset:8}]},
-    options:{responsive:true,maintainAspectRatio:false,cutout:'68%',plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>` ${c.label}: ${fmt(c.raw)} (${((c.raw/total)*100).toFixed(1)}%)`}}}}
+    options:{responsive:true,maintainAspectRatio:true,cutout:'68%',plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>` ${c.label}: ${fmt(c.raw)} (${((c.raw/total)*100).toFixed(1)}%)`}}}}
   });
   const sectorIcons = {
     'Technology':'💻','Defense':'🛡️','Healthcare':'🏥','Finance':'🏦',
@@ -980,10 +979,8 @@ function renderSectorChart(holdings){
   document.getElementById('sector-legend').innerHTML=labels.map((l,i)=>`
     <div class="legend-item">
       <div class="legend-dot" style="background:${colors[i]}"></div>
-      <span style="font-size:0.9rem">${sectorIcons[l]||'📦'}</span>
-      <span class="legend-name" style="font-size:0.78rem">${l}</span>
-      <span class="legend-pct" style="font-size:0.78rem;font-weight:600">${((vals[i]/total)*100).toFixed(1)}%</span>
-      <span class="legend-val" style="font-size:0.72rem">${fmt(vals[i])}</span>
+      <span style="color:var(--text);flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${l}</span>
+      <span style="color:#c9a84c;font-family:'DM Mono',monospace;flex-shrink:0;">${((vals[i]/total)*100).toFixed(1)}%</span>
     </div>`).join('');
 }
 
