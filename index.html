@@ -115,7 +115,7 @@
     th:nth-child(5),td:nth-child(5),
     th:nth-child(6),td:nth-child(6),
     th:nth-child(7),td:nth-child(7){display:none;}
-    .stock-name{max-width:130px!important;font-size:0.7rem!important;}
+    .stock-name{max-width:110px!important;font-size:0.68rem!important;white-space:normal!important;word-break:break-word!important;line-height:1.2!important;}
     .stock-isin{display:none;}
 
     /* Tabs and filters */
@@ -355,9 +355,7 @@
           <!-- Gains donut — same height as sector -->
           <div class="chart-card" style="margin-bottom:0;padding:1rem;">
             <div class="chart-title">Invested vs. Return</div>
-            <div style="display:flex;align-items:center;justify-content:center;">
-              <div style="width:110px;height:110px;position:relative;"><canvas id="gains-chart"></canvas></div>
-            </div>
+            <div class="chart-wrap" style="height:110px;"><canvas id="gains-chart"></canvas></div>
           </div>
           <!-- Asset Type below -->
           <div class="chart-card" style="margin-bottom:0;padding:1rem;">
@@ -1040,10 +1038,7 @@ function renderGainsChart(invested,current,returnPct){
   try { Chart.unregister({id:'gainsCenter'}); } catch(e) {}
   Chart.register(centerTextPlugin);
 
-  const gainsCanvas = document.getElementById('gains-chart');
-  gainsCanvas.style.width='110px';
-  gainsCanvas.style.height='110px';
-  charts.gains = new Chart(gainsCanvas.getContext('2d'), {
+  charts.gains = new Chart(document.getElementById('gains-chart').getContext('2d'), {
     type: 'doughnut',
     data: {
       labels: ['Invested', gainLabel],
