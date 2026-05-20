@@ -97,7 +97,7 @@
 
     /* Stack all grid layouts */
     div[style*="grid-template-columns:1.8fr"]{display:flex!important;flex-direction:column!important;}
-    #row-holdings-chart{grid-template-columns:1fr!important;}
+    #row-holdings-chart{grid-template-columns:1fr!important;overflow:hidden;width:100%;}
     #row-donuts{grid-template-columns:1fr!important;}
     #row-donuts>div:first-child{display:grid;grid-template-columns:1fr 1fr;gap:1rem;}
     #row-holdings-chart>div:last-child{display:flex;flex-direction:column;gap:1rem;}
@@ -116,8 +116,11 @@
     th:nth-child(5),td:nth-child(5),
     th:nth-child(6),td:nth-child(6),
     th:nth-child(7),td:nth-child(7){display:none;}
-    .stock-name{max-width:110px!important;font-size:0.68rem!important;white-space:normal!important;word-break:break-word!important;line-height:1.2!important;}
-    .stock-isin{display:none;}
+    .stock-name{font-size:0.68rem!important;white-space:normal!important;word-break:break-word!important;line-height:1.2!important;max-width:none!important;}
+    .stock-isin{font-size:0.58rem!important;}
+    /* Stock column takes remaining space, today right-aligned */
+    #holdings-tbody td:nth-child(1){width:auto;}
+    #holdings-tbody td:nth-child(2){text-align:right!important;white-space:nowrap;}
 
     /* Tabs and filters */
     .tab-btn{font-size:0.58rem;padding:0.3rem 0.45rem;}
@@ -297,7 +300,7 @@
           <tbody id="holdings-tbody"></tbody>
         </table>
       </div>
-      <div id="tab-history" class="tab-content" style="display:none">
+      <div id="tab-history" class="tab-content">
         <table>
           <thead><tr>
             <th>Date</th><th>Stock</th><th>Type</th><th>Shares</th><th>Price</th><th>Currency</th><th>Exchange</th><th>Total</th>
@@ -1297,10 +1300,13 @@ function render(){
   let dailyChange = 0, hasDailyData = false, dailyCount = 0;
   for(const h of holdings) {
     const lp = livePrices[h.isin+'|'+h.exchange];
-    if(lp && lp.prevClose) {
-      // Include FX effects for closed markets — matches DEGIRO behavior
-      const prevCloseSEK = toSEK(lp.prevClose, lp.currency);
-      dailyChange += (lp.priceSEK - prevCloseSEK) * h.shares;
+    if(lp) {
+      if(lp.tradedToday && lp.prevClose) {
+        // Market open — show actual price change + FX
+        const prevCloseSEK = toSEK(lp.prevClose, lp.currency);
+        dailyChange += (lp.priceSEK - prevCloseSEK) * h.shares;
+      }
+      // Market closed — 0 price change (like DEGIRO resets after close)
       hasDailyData = true;
       dailyCount++;
     }
@@ -1314,7 +1320,7 @@ function render(){
     dailyEl.textContent = (dailyChange >= 0 ? '+' : '') + fmt(dailyChange);
     dailyEl.className = 'kpi-value ' + (dailyChange >= 0 ? 'gain-text' : 'loss-text');
     dailyPctEl.textContent = (dailyPct >= 0 ? '+' : '') + dailyPct.toFixed(2) + '% · ' + dailyCount + ' stocks';
-    dailyCard.className = 'kpi-card' + (dailyChange < 0 ? ' red' : ' blue');
+    dailyCard.className = 'kpi-card' + (dailyChange < 0 ? ' red' : ' green');
     dailyCard.querySelector('::before') // trigger repaint
   } else {
     dailyEl.textContent = '—';
@@ -1474,11 +1480,19 @@ function renderHoldings(hs){
 
     // Daily change for this stock
     let dailyCell = '<span class="no-ticker">—</span>';
-    if(lp && lp.prevClose) {
-      const prevCloseSEK = toSEK(lp.prevClose, lp.currency);
-      const dailyChgSEK = (lp.priceSEK - prevCloseSEK) * h.shares;
-      const dailyPct = lp.prevClose > 0 ? ((lp.price - lp.prevClose) / lp.prevClose * 100) : 0;
-      const stateIcon = lp.tradedToday ? '' : ' 🌙';
+    if(lp) {
+      let dailyChgSEK, dailyPct;
+      if(lp.tradedToday && lp.prevClose) {
+        // Market traded today — show price movement + FX
+        const prevCloseSEK = toSEK(lp.prevClose, lp.currency);
+        dailyChgSEK = (lp.priceSEK - prevCloseSEK) * h.shares;
+        dailyPct = lp.prevClose > 0 ? ((lp.price - lp.prevClose) / lp.prevClose * 100) : 0;
+      } else {
+        // Market closed — reset price change to 0, only FX moves (like DEGIRO)
+        dailyChgSEK = 0;
+        dailyPct = 0;
+      }
+      const stateIcon = !lp.tradedToday ? ' 🌙' : '';
       dailyCell = `<span class="${dailyChgSEK>=0?'gain-text':'loss-text'}">${dailyChgSEK>=0?'+':''}${fmt(dailyChgSEK)}<br><small>${dailyPct>=0?'+':''}${dailyPct.toFixed(2)}%${stateIcon}</small></span>`;
     }
 
