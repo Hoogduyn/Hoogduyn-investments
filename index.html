@@ -17,7 +17,6 @@
   :root {
     --bg:#0b0e13;--surface:#12161e;--surface2:#1a1f2e;--border:#252b3b;
     --accent:#c9a84c;--accent2:#c9a84c;--gold:#c9a84c;--gold-light:#e8d5a3;--gain:#50c878;--loss:#e74c3c;--text:#e8ecf4;--muted:#6b7694;
-    --gain:#00e5a0;--loss:#ff6b6b;
   }
   *{margin:0;padding:0;box-sizing:border-box;}
   body{background:var(--bg);color:var(--text);font-family:'DM Mono',monospace;min-height:100vh;}
@@ -193,7 +192,7 @@
   .logout-btn{background:transparent;border:none;color:var(--muted);font-size:0.68rem;cursor:pointer;text-decoration:underline;font-family:'DM Mono',monospace;}
   .logout-btn:hover{color:var(--loss);}
   .toggle-btn{background:var(--surface2);border:1px solid var(--border);color:var(--muted);padding:0.3rem 0.8rem;border-radius:5px;font-family:'DM Mono',monospace;font-size:0.68rem;cursor:pointer;transition:all 0.15s;}
-  .toggle-btn.active{background:rgba(0,229,160,0.12);border-color:var(--accent);color:var(--accent);}
+  .toggle-btn.active{background:rgba(201,168,76,0.12);border-color:#c9a84c;color:#c9a84c;}
 </style>
 </head>
 <body>
@@ -292,7 +291,7 @@
         <button class="tab-btn active" data-tab="current">Current Holdings</button>
         <button class="tab-btn" data-tab="history">Transaction History</button>
       </div>
-      <div id="tab-current" class="tab-content active">
+      <div id="tab-current" class="tab-content active" style="overflow-x:auto;-webkit-overflow-scrolling:touch;">
         <table>
           <thead><tr>
             <th onclick="sortHoldings('name')" style="cursor:pointer">Stock ↕</th>
@@ -1014,7 +1013,7 @@ function renderSectorChart(holdings){
 function renderGainsChart(invested,current,returnPct){
   const gain = current - invested;
   const isGain = gain >= 0;
-  const gainColor = isGain ? '#00e5a0' : '#ff6b6b';
+  const gainColor = isGain ? '#50c878' : '#e74c3c';
   const gainLabel = isGain ? 'Gains' : 'Loss';
 
   // Register center text plugin globally for this chart
@@ -1388,7 +1387,7 @@ function renderPortfolioScore(holdings) {
     const lp = livePrices[h.isin+'|'+h.exchange];
     const gain = lp ? h.currentVal - h.costSEK : null;
     const gainStr = gain !== null
-      ? `<span style="color:${gain>=0?'var(--gain)':'var(--loss)'};">${gain>=0?'+':''}${fmt(gain)}</span>`
+      ? `<span style="color:${gain>=0?'#50c878':'#e74c3c'};">${gain>=0?'+':''}${fmt(gain)}</span>`
       : '';
     return `
       <div>
@@ -1400,7 +1399,7 @@ function renderPortfolioScore(holdings) {
           <div style="display:flex;align-items:center;gap:1rem;flex-shrink:0;">
             ${gainStr}
             <span style="font-size:0.75rem;color:var(--text);font-weight:600">${fmt(h.currentVal)}</span>
-            <span style="font-size:0.72rem;color:var(--muted);width:3.5rem;text-align:right">${pct.toFixed(1)}%</span>
+            <span style="font-size:0.72rem;color:#c9a84c;font-family:'DM Mono',monospace;min-width:3rem;text-align:right">${pct.toFixed(1)}%</span>
           </div>
         </div>
         <div style="background:var(--surface2);border-radius:3px;height:5px;overflow:hidden;">
