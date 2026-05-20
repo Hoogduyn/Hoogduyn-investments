@@ -52,6 +52,7 @@
   .kpi-card::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,#c9a84c,transparent);}
   .kpi-card.blue::before{background:linear-gradient(90deg,#c9a84c,transparent);}
   .kpi-card.red::before{background:linear-gradient(90deg,var(--loss),transparent);}
+  .kpi-card.green::before{background:linear-gradient(90deg,#50c878,transparent);}
   .kpi-label{font-size:0.6rem;color:#c9a84c;text-transform:uppercase;letter-spacing:0.2em;margin-bottom:0.5rem;opacity:0.85;font-family:'DM Mono',monospace;}
   .kpi-value{font-family:'Syne',sans-serif;font-size:1.5rem;font-weight:700;line-height:1;margin-bottom:0.3rem;}
   .kpi-sub{font-size:0.65rem;color:#c9a84c;opacity:0.4;font-family:'DM Mono',monospace;}
@@ -111,8 +112,9 @@
     .chart-wrap{height:150px!important;}
     #timeline-chart-wrap{height:160px!important;}
 
-    /* Hide columns on mobile - keep Stock, Today, Shares, Value, Gain */
+    /* Hide on mobile - keep Stock, Today, Value, Gain */
     th:nth-child(3),td:nth-child(3),
+    th:nth-child(4),td:nth-child(4),
     th:nth-child(5),td:nth-child(5),
     th:nth-child(6),td:nth-child(6),
     th:nth-child(7),td:nth-child(7){display:none;}
@@ -1330,7 +1332,7 @@ function render(){
     dailyEl.textContent = '—';
     dailyEl.className = 'kpi-value';
     dailyPctEl.textContent = 'Refresh for live data';
-    dailyCard.className = 'kpi-card blue'; // gold stripe via CSS
+    dailyCard.className = 'kpi-card' + (dailyChange < 0 ? ' red' : ' green');
   }
 
   const gainEl=document.getElementById('kpi-gain');
