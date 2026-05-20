@@ -284,10 +284,10 @@
 
 
   <!-- ROW 1: Holdings table left | Portfolio Growth + donuts/breakdown right -->
-  <div id="row-holdings-chart" style="display:grid;grid-template-columns:1fr 1.4fr;gap:1.5rem;margin-bottom:1.5rem;align-items:start;">
+  <div id="row-holdings-chart" style="display:grid;grid-template-columns:1fr 1.4fr;gap:1.5rem;margin-bottom:1.5rem;align-items:start;overflow:hidden;min-width:0;">
 
     <!-- LEFT: Holdings table -->
-    <div class="chart-card" style="margin-bottom:0;overflow-x:hidden;max-width:100%;">
+    <div class="chart-card" style="margin-bottom:0;overflow:hidden;min-width:0;">
       <div class="tab-bar" style="margin:-1.5rem -1.5rem 1rem;border-radius:12px 12px 0 0;overflow:hidden;">
         <button class="tab-btn active" data-tab="current">Current Holdings</button>
         <button class="tab-btn" data-tab="history">Transaction History</button>
@@ -767,7 +767,7 @@ function parseCSVText(text){
       currency:(c[8]||'SEK').trim().replace(/[^A-Za-z]/g,''),
       priceLocal, exchange, execPlace,
       totalSEK: totalAccount,
-      valueSEK: valueAccount,
+      valueSEK: Math.abs(parseFloat(String(valueAccount).replace(',','.'))||0),
     });
   }
   return rows;
@@ -802,7 +802,7 @@ function parseXLSX(arrayBuffer){
       currency:String(c[8]||'SEK').trim().replace(/[^A-Za-z]/g,''),
       priceLocal, exchange, execPlace,
       totalSEK: totalAccount,
-      valueSEK: valueAccount,
+      valueSEK: Math.abs(parseFloat(String(valueAccount).replace(',','.'))||0),
     });
   }
   return result;
@@ -1291,7 +1291,7 @@ function render(){
   holdings=buildHoldings(allTx,null); // always show current holdings regardless of period
   // Net invested = total buys - total sell proceeds (matches DEGIRO's calculation)
   const totalBuys = allTx.filter(t=>t.shares>0).reduce((s,t)=>s+(t.valueSEK>0?Math.abs(t.valueSEK):Math.abs(t.totalSEK)),0);
-  const totalSells = allTx.filter(t=>t.shares<0).reduce((s,t)=>s+Math.abs(t.totalSEK),0);
+  const totalSells = allTx.filter(t=>t.shares<0).reduce((s,t)=>s+(t.valueSEK>0?Math.abs(t.valueSEK):Math.abs(t.totalSEK)),0);
   const invested = Math.max(totalBuys - totalSells, 0);
   let current=0,liveCount=0;
   for(const h of holdings){
