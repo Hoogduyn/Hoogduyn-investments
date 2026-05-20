@@ -98,7 +98,9 @@
 
     /* Stack all grid layouts */
     div[style*="grid-template-columns:1.8fr"]{display:flex!important;flex-direction:column!important;}
-    #row-holdings-chart{grid-template-columns:1fr!important;overflow:hidden;width:100%;}
+    #row-holdings-chart{grid-template-columns:1fr!important;overflow:hidden;width:100%;max-width:100vw;}
+    #row-donuts{overflow:hidden;width:100%;}
+    #row-donuts>div:first-child{width:100%;}
     #row-donuts{grid-template-columns:1fr!important;}
     #row-donuts>div:first-child{display:grid;grid-template-columns:1fr 1fr;gap:1rem;}
     #row-holdings-chart>div:last-child{display:flex;flex-direction:column;gap:1rem;}
@@ -112,12 +114,17 @@
     .chart-wrap{height:150px!important;}
     #timeline-chart-wrap{height:160px!important;}
 
-    /* Hide on mobile - keep Stock, Today, Value, Gain */
-    th:nth-child(3),td:nth-child(3),
-    th:nth-child(4),td:nth-child(4),
-    th:nth-child(5),td:nth-child(5),
-    th:nth-child(6),td:nth-child(6),
-    th:nth-child(7),td:nth-child(7){display:none;}
+    /* Holdings table - hide on mobile, keep Stock(1), Today(2), Value(8), Gain(9) */
+    #tab-current th:nth-child(3),#tab-current td:nth-child(3),
+    #tab-current th:nth-child(4),#tab-current td:nth-child(4),
+    #tab-current th:nth-child(5),#tab-current td:nth-child(5),
+    #tab-current th:nth-child(6),#tab-current td:nth-child(6),
+    #tab-current th:nth-child(7),#tab-current td:nth-child(7){display:none;}
+    /* History table - keep Date(1), Stock(2), Type(3), Total(8) */
+    #tab-history th:nth-child(4),#tab-history td:nth-child(4),
+    #tab-history th:nth-child(5),#tab-history td:nth-child(5),
+    #tab-history th:nth-child(6),#tab-history td:nth-child(6),
+    #tab-history th:nth-child(7),#tab-history td:nth-child(7){display:none;}
     .stock-name{font-size:0.68rem!important;white-space:normal!important;word-break:break-word!important;line-height:1.2!important;max-width:none!important;}
     .stock-isin{font-size:0.58rem!important;}
     /* Stock column takes remaining space, today right-aligned */
@@ -233,7 +240,6 @@
     <button class="btn-ghost" id="upload-new-btn">↑ New File</button>
     <input type="file" accept=".csv,.xlsx,.xls" id="file-input-2" style="display:none">
     <button class="btn-primary" id="refresh-btn">⟳ Refresh</button>
-    <button class="btn-ghost" id="auto-btn" onclick="toggleAuto(this)" style="font-size:0.65rem;">⏱ Auto: ON</button>
     <div style="width:1px;height:20px;background:#333;"></div>
     <div class="user-badge">👤 <span id="username-display"></span> <button class="logout-btn" onclick="doLogout()">Sign out</button></div>
     <div class="last-updated" id="last-updated" style="font-size:0.65rem;"></div>
@@ -302,7 +308,7 @@
           <tbody id="holdings-tbody"></tbody>
         </table>
       </div>
-      <div id="tab-history" class="tab-content">
+      <div id="tab-history" class="tab-content" style="overflow-x:auto;-webkit-overflow-scrolling:touch;">
         <table>
           <thead><tr>
             <th>Date</th><th>Stock</th><th>Type</th><th>Shares</th><th>Price</th><th>Currency</th><th>Exchange</th><th>Total</th>
@@ -750,7 +756,8 @@ function parseCSVText(text){
     if(!name||!isin||isin.length<5)continue;
     const antal=parseNum(c[6]);
     if(antal===0)continue;
-    const totalAccount=parseNum(c[15]||c[14]||'0'); // Total in account currency (SEK or EUR)
+    const totalAccount=parseNum(c[15]||c[14]||'0'); // Total incl fees
+    const valueAccount=parseNum(c[11]||c[15]||'0'); // Värde SEK - price*shares*fx, no fees
     const priceLocal = parseNum(c[7]);
     const exchange = (c[4]||'').trim(); // Referensbörs e.g. XET, OMX, NSY
     const execPlace = (c[5]||'').trim(); // e.g. XETA, XAMS, ETFP, XLON
@@ -760,6 +767,7 @@ function parseCSVText(text){
       currency:(c[8]||'SEK').trim().replace(/[^A-Za-z]/g,''),
       priceLocal, exchange, execPlace,
       totalSEK: totalAccount,
+      valueSEK: valueAccount,
     });
   }
   return rows;
@@ -783,6 +791,7 @@ function parseXLSX(arrayBuffer){
     const antal=parseNum(c[6]);
     if(antal===0)continue;
     const totalAccount=parseNum(c[15]||c[14]||0);
+    const valueAccount=parseNum(c[11]||c[15]||0);
     const dateStr=String(c[0]||'').trim();
     const priceLocal = parseNum(c[7]);
     const exchange = String(c[4]||'').trim();
@@ -793,6 +802,7 @@ function parseXLSX(arrayBuffer){
       currency:String(c[8]||'SEK').trim().replace(/[^A-Za-z]/g,''),
       priceLocal, exchange, execPlace,
       totalSEK: totalAccount,
+      valueSEK: valueAccount,
     });
   }
   return result;
@@ -1280,11 +1290,7 @@ function render(){
   const from=getFromDate(period);
   holdings=buildHoldings(allTx,null); // always show current holdings regardless of period
   // Net invested = total buys - total sell proceeds (matches DEGIRO's calculation)
-  // Use price*shares (ex fees) to match DEGIRO's invested calculation
-  const totalBuys = allTx.filter(t=>t.shares>0).reduce((s,t)=>{
-    const priceSEK = t.priceLocal > 0 ? toSEK(t.priceLocal * Math.abs(t.shares), t.currency) : Math.abs(t.totalSEK);
-    return s + priceSEK;
-  }, 0);
+  const totalBuys = allTx.filter(t=>t.shares>0).reduce((s,t)=>s+(t.valueSEK>0?Math.abs(t.valueSEK):Math.abs(t.totalSEK)),0);
   const totalSells = allTx.filter(t=>t.shares<0).reduce((s,t)=>s+Math.abs(t.totalSEK),0);
   const invested = Math.max(totalBuys - totalSells, 0);
   let current=0,liveCount=0;
@@ -1326,13 +1332,13 @@ function render(){
     dailyEl.textContent = (dailyChange >= 0 ? '+' : '') + fmt(dailyChange);
     dailyEl.className = 'kpi-value ' + (dailyChange >= 0 ? 'gain-text' : 'loss-text');
     dailyPctEl.textContent = (dailyPct >= 0 ? '+' : '') + dailyPct.toFixed(2) + '% · ' + dailyCount + ' stocks';
-    dailyCard.className = 'kpi-card' + (dailyChange < 0 ? ' red' : ' green');
+    dailyCard.className = 'kpi-card' + (hasLive ? (dailyChange < 0 ? ' red' : ' green') : '');
     dailyCard.querySelector('::before') // trigger repaint
   } else {
     dailyEl.textContent = '—';
     dailyEl.className = 'kpi-value';
     dailyPctEl.textContent = 'Refresh for live data';
-    dailyCard.className = 'kpi-card' + (dailyChange < 0 ? ' red' : ' green');
+    dailyCard.className = 'kpi-card' + (hasLive ? (dailyChange < 0 ? ' red' : ' green') : '');
   }
 
   const gainEl=document.getElementById('kpi-gain');
