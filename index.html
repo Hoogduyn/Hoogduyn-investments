@@ -1278,7 +1278,11 @@ function render(){
   const from=getFromDate(period);
   holdings=buildHoldings(allTx,null); // always show current holdings regardless of period
   // Net invested = total buys - total sell proceeds (matches DEGIRO's calculation)
-  const totalBuys = allTx.filter(t=>t.shares>0).reduce((s,t)=>s+Math.abs(t.totalSEK),0);
+  // Use price*shares (ex fees) to match DEGIRO's invested calculation
+  const totalBuys = allTx.filter(t=>t.shares>0).reduce((s,t)=>{
+    const priceSEK = t.priceLocal > 0 ? toSEK(t.priceLocal * Math.abs(t.shares), t.currency) : Math.abs(t.totalSEK);
+    return s + priceSEK;
+  }, 0);
   const totalSells = allTx.filter(t=>t.shares<0).reduce((s,t)=>s+Math.abs(t.totalSEK),0);
   const invested = Math.max(totalBuys - totalSells, 0);
   let current=0,liveCount=0;
