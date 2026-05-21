@@ -1697,7 +1697,7 @@ function getYahooTicker(h) {
 
   const now = new Date().toLocaleTimeString('sv-SE');
   sb.textContent = 'Done: ' + live + ' live, ' + fail + ' failed, ' + skip + ' no ticker. Updated ' + now;
-  document.getElementById('last-updated').textContent = 'Updated ' + now;
+  const lu=document.getElementById('last-updated'); if(lu) lu.textContent = 'Updated ' + now;
   btn.disabled=false; btn.textContent='⧳ Refresh Live Prices';
   render();
 }
@@ -1782,7 +1782,7 @@ function processTransactions(txs){
   allTx=txs;livePrices={};historicalPrices={};
   document.getElementById('upload-zone').style.display='none';
   document.getElementById('dashboard').style.display='block';
-  document.getElementById('last-updated').textContent=`${txs.length} transactions loaded`;
+  const lu2=document.getElementById('last-updated'); if(lu2) lu2.textContent=`${txs.length} transactions loaded`;
   period='ALL';
   document.querySelectorAll('.filter-btn').forEach(b=>b.classList.toggle('active',b.dataset.period==='ALL'));
   render();
@@ -1930,7 +1930,7 @@ async function loadSavedPortfolio() {
       accountCurrency = data.accountCurrency || 'SEK';
       document.getElementById('upload-zone').style.display = 'none';
       document.getElementById('dashboard').style.display = 'block';
-      document.getElementById('last-updated').textContent = `${allTx.length} transactions loaded`;
+      const lu3=document.getElementById('last-updated'); if(lu3) lu3.textContent=`${allTx.length} transactions loaded`;
       period = 'ALL';
       document.querySelectorAll('.filter-btn').forEach(b => b.classList.toggle('active', b.dataset.period === 'ALL'));
       render();
