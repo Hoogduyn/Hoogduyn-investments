@@ -885,7 +885,9 @@ function buildHoldings(transactions,fromDate){
     };
     const h=map[key];
     // Only adjust priceLocal for BEP — shares in CSV are already post-split
-    const adjPrice = applySplits(tx.isin, tx.date, 1, tx.priceLocal || 0).priceLocal;
+    const splitAdj = applySplits(tx.isin, tx.date, 1, tx.priceLocal || 0);
+    const adjPrice = splitAdj.priceLocal;
+    if(adjPrice !== (tx.priceLocal||0)) console.log(`Split adj: ${tx.name} ${tx.dateStr} ${tx.priceLocal} → ${adjPrice}`);
     h.shares += tx.shares;
     if(tx.shares > 0){
       h.totalBuyShares += tx.shares;
@@ -1792,11 +1794,9 @@ function getYahooTicker(h) {
           priceSEK: toSEK(p.close, p.currency || cur, p.date.toISOString().slice(0,10))
         }));
       }
-      // Store Yahoo splits for this ISIN
+      // Log Yahoo splits for reference only
       if (yahooSplits.length) {
-        if (!STOCK_SPLITS[h.isin]) STOCK_SPLITS[h.isin] = [];
-        STOCK_SPLITS[h.isin] = yahooSplits;
-        console.log(`Splits for ${h.name}:`, yahooSplits);
+        console.log(`Yahoo splits for ${h.name}:`, yahooSplits);
       }
       // Fetch intraday for 1D chart
       const intra = await fetchIntraday(ticker);
